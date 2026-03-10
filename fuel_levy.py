@@ -25,6 +25,7 @@ import csv
 import io
 import json
 import logging
+import shutil
 import sys
 import webbrowser
 from datetime import datetime, date, timedelta
@@ -51,6 +52,7 @@ AIP_API_URL: str = (
 AIP_EXCEL_BASE: str = "https://www.aip.com.au/sites/default/files/download-files"
 HISTORY_DIR: Path = Path(__file__).parent / "history"
 REPORT_DIR: Path = Path(__file__).parent / "reports"
+SHAREPOINT_DIR: Path = Path.home() / "Booth Transport" / "Customers - Customer Documents"
 
 TERMINALS: list[str] = [
     "Sydney", "Melbourne", "Brisbane", "Adelaide", "Perth", "Darwin", "Hobart",
@@ -497,114 +499,25 @@ def generate_html_report() -> Path:
     weekly_app = w_applicable if isinstance(w_applicable, str) else "N/A"
     monthly_app = m_applicable if isinstance(m_applicable, str) else "N/A"
 
-    # Build daily history table (newest first)
-    daily_rows_html = ""
-    for row in reversed(daily_history):
-        daily_rows_html += (
-            f"<tr><td>{fmt_date(row['date'])}</td>"
-            f"<td>${float(row['avg_tgp_cpl'])/100:.4f}/L</td>"
-            f"<td><strong>{float(row['levy_pct']):.2f}%</strong></td></tr>\n"
-        )
-
-    # Build weekly history table (newest first)
-    weekly_rows_html = ""
-    for row in reversed(weekly_history):
-        weekly_rows_html += (
-            f"<tr><td>{fmt_date(row['period_start'])}</td><td>{fmt_date(row['period_end'])}</td>"
-            f"<td>{row['applicable_to']}</td><td>${float(row['avg_tgp_cpl'])/100:.4f}/L</td>"
-            f"<td><strong>{float(row['levy_pct']):.2f}%</strong></td><td>{row['days']}</td></tr>\n"
-        )
-
-    # Build monthly history table (newest first)
-    monthly_rows_html = ""
-    for row in reversed(monthly_history):
-        monthly_rows_html += (
-            f"<tr><td>{fmt_date(row['period_start'])}</td><td>{fmt_date(row['period_end'])}</td>"
-            f"<td>{row['applicable_to']}</td><td>${float(row['avg_tgp_cpl'])/100:.4f}/L</td>"
-            f"<td><strong>{float(row['levy_pct']):.2f}%</strong></td><td>{row['days']}</td></tr>\n"
-        )
-
-    # Build SVG chart from daily data — full width with JS tooltip
-    chart_svg = ""
-    chart_w, chart_h = 960, 280  # defaults for JS reference
+    # Shared chart layout constants used by build_page
+    chart_w, chart_h = 960, 280
+    pad_l, pad_r, pad_t, pad_b = 55, 15, 25, 45
+    plot_w = chart_w - pad_l - pad_r
+    plot_h = chart_h - pad_t - pad_b
     chart_data = daily_history if len(daily_history) >= 2 else weekly_history
-    if len(chart_data) >= 2:
-        chart_w, chart_h = 960, 280
-        pad_l, pad_r, pad_t, pad_b = 55, 15, 25, 45
-        plot_w = chart_w - pad_l - pad_r
-        plot_h = chart_h - pad_t - pad_b
 
-        levies = [float(r["levy_pct"]) for r in chart_data]
-        tgps = [float(r.get("avg_tgp_cpl", 0)) for r in chart_data]
-        if "date" in chart_data[0]:
-            full_dates = [fmt_date(r["date"]) for r in chart_data]
-            short_dates = [r["date"][8:10] + "-" + r["date"][5:7] for r in chart_data]  # DD-MM
-        else:
-            full_dates = [r["applicable_to"] for r in chart_data]
-            short_dates = [r["applicable_to"].split(" - ")[0] for r in chart_data]
-        min_l = min(levies) - 2
-        max_l = max(levies) + 2
-        span = max_l - min_l if max_l != min_l else 1
+    if "date" in (chart_data[0] if chart_data else {}):
+        full_dates = [fmt_date(r["date"]) for r in chart_data]
+        short_dates = [r["date"][8:10] + "-" + r["date"][5:7] for r in chart_data]
+    elif chart_data:
+        full_dates = [r["applicable_to"] for r in chart_data]
+        short_dates = [r["applicable_to"].split(" - ")[0] for r in chart_data]
+    else:
+        full_dates = []
+        short_dates = []
 
-        points = []
-        for i, lev in enumerate(levies):
-            x = pad_l + (i / (len(levies) - 1)) * plot_w
-            y = pad_t + plot_h - ((lev - min_l) / span) * plot_h
-            points.append((x, y, lev, full_dates[i], short_dates[i], tgps[i]))
-
-        polyline = " ".join(f"{p[0]:.1f},{p[1]:.1f}" for p in points)
-
-        # Area fill under line
-        area = f"M {points[0][0]:.1f},{pad_t + plot_h} " + " ".join(f"L {p[0]:.1f},{p[1]:.1f}" for p in points) + f" L {points[-1][0]:.1f},{pad_t + plot_h} Z"
-
-        grid_lines = ""
-        for i in range(5):
-            val = min_l + (i / 4) * span
-            y = pad_t + plot_h - (i / 4) * plot_h
-            grid_lines += f'<line x1="{pad_l}" y1="{y:.1f}" x2="{chart_w - pad_r}" y2="{y:.1f}" stroke="#E0DDD8" stroke-width="1"/>\n'
-            grid_lines += f'<text x="{pad_l - 8}" y="{y:.1f}" text-anchor="end" fill="#999" font-size="11" dy="4">{val:.1f}%</text>\n'
-
-        # Invisible hover targets for each point (wide rects for easy hovering)
-        hover_targets = ""
-        hit_w = plot_w / max(1, len(points) - 1)
-        for i, (x, y, lev, full_d, short_d, tgp) in enumerate(points):
-            hover_targets += (
-                f'<rect x="{x - hit_w/2:.1f}" y="{pad_t}" width="{hit_w:.1f}" height="{plot_h}" '
-                f'fill="transparent" class="hover-target" '
-                f'data-x="{x:.1f}" data-y="{y:.1f}" data-levy="{lev:.2f}" '
-                f'data-date="{full_d}" data-tgp="{tgp/100:.4f}"/>\n'
-            )
-
-        # X axis labels — ~10 evenly spaced
-        x_labels = ""
-        step = max(1, len(points) // 10)
-        for i, (x, y, lev, full_d, short_d, tgp) in enumerate(points):
-            if i % step == 0 or i == len(points) - 1:
-                x_labels += f'<text x="{x:.1f}" y="{chart_h - 6}" text-anchor="middle" fill="#999" font-size="10">{short_d}</text>\n'
-
-        # First/last value labels
-        fl_labels = ""
-        if points:
-            fx, fy, fl = points[0][0], points[0][1], points[0][2]
-            fl_labels += f'<text x="{fx:.1f}" y="{fy:.1f}" dy="-10" text-anchor="start" fill="#1C1F26" font-size="11" font-weight="600">{fl:.2f}%</text>\n'
-            lx, ly, ll = points[-1][0], points[-1][1], points[-1][2]
-            fl_labels += f'<text x="{lx:.1f}" y="{ly:.1f}" dy="-10" text-anchor="end" fill="#1C1F26" font-size="11" font-weight="600">{ll:.2f}%</text>\n'
-
-        chart_svg = f"""
-        <div style="position:relative;">
-            <svg id="trendChart" viewBox="0 0 {chart_w} {chart_h}" style="width:100%;height:auto;display:block;">
-                {grid_lines}
-                <path d="{area}" fill="#C17F4E" fill-opacity="0.08"/>
-                <polyline points="{polyline}" fill="none" stroke="#C17F4E" stroke-width="2.5" stroke-linejoin="round"/>
-                {fl_labels}
-                {x_labels}
-                <circle id="hoverDot" cx="0" cy="0" r="5" fill="#C17F4E" stroke="#fff" stroke-width="2" style="display:none;pointer-events:none;"/>
-                <line id="hoverLine" x1="0" y1="{pad_t}" x2="0" y2="{pad_t + plot_h}" stroke="#C17F4E" stroke-width="1" stroke-dasharray="4,3" style="display:none;pointer-events:none;"/>
-                {hover_targets}
-            </svg>
-            <div id="tooltip" style="display:none;position:absolute;background:#1C1F26;color:#F5F5F3;padding:8px 12px;border-radius:6px;font-size:13px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:10;">
-            </div>
-        </div>"""
+    tgps = [float(r.get("avg_tgp_cpl", 0)) for r in chart_data]
+    hit_w = plot_w / max(1, len(chart_data) - 1) if len(chart_data) >= 2 else plot_w
 
     # ---------------------------------------------------------------
     # Build a page content block for each levy config
@@ -908,6 +821,11 @@ initChartTooltips();
     # index.html for GitHub Pages
     index_path = REPORT_DIR / "index.html"
     index_path.write_text(html, encoding="utf-8")
+    # Copy to SharePoint if available
+    if SHAREPOINT_DIR.exists():
+        sp_path = SHAREPOINT_DIR / "Fuel Levy Report.html"
+        shutil.copy2(report_path, sp_path)
+        log.info("Copied to SharePoint: %s", sp_path)
     log.info("Report saved to %s", report_path)
     return report_path
 
