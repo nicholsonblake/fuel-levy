@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fuel Levy Report - Booth Transport</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Calibri,'Segoe UI',sans-serif; background:#F5F5F3; color:#1C1F26; display:flex; min-height:100vh; }
+
+    /* Sidebar */
+    .sidebar { width:200px; background:#1C1F26; color:#F5F5F3; padding:24px 0; flex-shrink:0; position:fixed; top:0; left:0; height:100vh; display:flex; flex-direction:column; }
+    .sidebar-brand { padding:0 20px 20px; border-bottom:1px solid #333; margin-bottom:16px; }
+    .sidebar-brand h1 { font-size:16px; font-weight:600; line-height:1.3; }
+    .sidebar-brand .meta { font-size:11px; color:#888; margin-top:6px; }
+    .sidebar-btn { display:block; width:100%; text-align:left; padding:12px 20px; background:none; border:none; color:#999; font-family:inherit; font-size:14px; cursor:pointer; transition:all .15s; }
+    .sidebar-btn:hover { background:#2a2d36; color:#F5F5F3; }
+    .sidebar-btn.active { background:#C17F4E; color:#fff; font-weight:600; }
+
+    /* Main content */
+    .main { margin-left:200px; flex:1; padding:24px 32px; max-width:1100px; }
+
+    .formula { background:#fff; border:1px solid #E0DDD8; border-radius:6px; padding:12px 20px; margin-bottom:24px; font-size:14px; color:#555; text-align:center; }
+    .formula code { background:#F0EDEA; padding:2px 8px; border-radius:4px; font-family:Consolas,monospace; font-size:13px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; margin-bottom:32px; }
+    .card { background:#fff; border-radius:8px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .card h2 { font-size:16px; font-weight:600; margin-bottom:4px; }
+    .card .subtitle { font-size:13px; color:#777; margin-bottom:4px; }
+    .card .applicable { font-size:13px; color:#3B8A6A; margin-bottom:16px; }
+    .card .error { color:#C45B5B; font-weight:600; padding:20px 0; }
+    .levy-hero { text-align:center; padding:20px 0; margin-bottom:16px; background:#FAFAF8; border-radius:6px; }
+    .levy-number { display:block; font-size:42px; font-weight:700; color:#C17F4E; }
+    .levy-label { font-size:13px; color:#999; text-transform:uppercase; letter-spacing:1px; }
+    table.details { width:100%; font-size:14px; border-collapse:collapse; margin-bottom:12px; }
+    table.details td { padding:6px 0; border-bottom:1px solid #F0EDEA; }
+    table.details td:last-child { text-align:right; }
+    details { font-size:13px; color:#777; }
+    details summary { cursor:pointer; padding:6px 0; }
+    table.terminals { width:100%; font-size:13px; border-collapse:collapse; margin-top:8px; }
+    table.terminals th, table.terminals td { padding:4px 0; border-bottom:1px solid #F0EDEA; text-align:left; }
+    table.terminals td:last-child, table.terminals th:last-child { text-align:right; }
+    table.terminals tr.total td { border-top:2px solid #1C1F26; font-weight:600; }
+
+    .history-section { margin-bottom:32px; }
+    .history-section h2 { font-size:18px; font-weight:600; margin-bottom:16px; padding-bottom:8px; border-bottom:2px solid #E0DDD8; }
+    .chart-card { background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:20px; }
+    .chart-card h3 { font-size:15px; font-weight:600; margin-bottom:8px; color:#555; }
+    table.history { width:100%; font-size:13px; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    table.history th { background:#1C1F26; color:#F5F5F3; padding:10px 12px; text-align:left; font-weight:500; }
+    table.history td { padding:8px 12px; border-bottom:1px solid #F0EDEA; }
+    table.history tr:hover { background:#FAFAF8; }
+
+    .tabs { display:flex; gap:0; margin-bottom:0; }
+    .tab { padding:10px 24px; background:#E0DDD8; border:none; cursor:pointer; font-family:inherit; font-size:14px; font-weight:500; color:#555; border-radius:8px 8px 0 0; }
+    .tab.active { background:#fff; color:#1C1F26; font-weight:600; }
+    .htab-content { display:none; }
+    .htab-content.active { display:block; }
+
+    footer { text-align:center; font-size:12px; color:#999; padding:16px 0; }
+    @media print {
+        .sidebar { display:none; }
+        .main { margin-left:0; }
+        body { background:#fff; }
+        .levy-hero { background:#FAFAF8; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        .card,.chart-card { break-inside:avoid; }
+        table.history th { background:#1C1F26; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <h1>Booth Transport</h1>
+        <div class="meta">Fuel Levy Report<br>10 Mar 2026 18:05</div>
+    </div>
+    <button class="sidebar-btn active" onclick="switchPage('global')">Global Levy</button>
+<button class="sidebar-btn" onclick="switchPage('dollar')">$1.00 Levy</button>
+
+</div>
+
+<div class="main">
+    <div id="page-global" class="page-content" style="display:block;">
+        <div class="formula">Fuel Levy = <code>((Avg Diesel TGP - Base $0.80/L) / Base) x 30% weighting</code></div>
+        <div class="grid">
+        <div class="card" style="border-top:4px solid #C17F4E;">
+            <h2>Daily</h2>
+            <p class="subtitle">10-03-2026</p>
+            <p class="applicable">Applicable to: <strong>10-03-2026</strong></p>
+            <div class="levy-hero"><span class="levy-number">52.69%</span><span class="levy-label">Fuel Levy</span></div>
+            <table class="details">
+                <tr><td>Avg Diesel TGP</td><td><strong>$2.2050/L</strong></td></tr>
+                <tr><td>Base Price</td><td>$0.80/L</td></tr>
+                <tr><td>Price Movement</td><td>+175.62%</td></tr>
+                <tr><td>Fuel Weighting</td><td>30%</td></tr>
+            </table>
+            <details><summary>Terminal Breakdown</summary>
+                <table class="terminals"><tr><th>Terminal</th><th>Avg cpl</th></tr><tr><td>Adelaide</td><td>220.66</td></tr><tr><td>Brisbane</td><td>220.81</td></tr><tr><td>Darwin</td><td>225.31</td></tr><tr><td>Hobart</td><td>217.40</td></tr><tr><td>Melbourne</td><td>218.52</td></tr><tr><td>Perth</td><td>219.55</td></tr><tr><td>Sydney</td><td>221.22</td></tr>
+                <tr class="total"><td>Average</td><td><strong>220.50</strong></td></tr></table>
+            </details>
+        </div>
+        <div class="card" style="border-top:4px solid #3B8A6A;">
+            <h2>Weekly</h2>
+            <p class="subtitle">28-02-2026 - 06-03-2026 (5 trading days)</p>
+            <p class="applicable">Applicable to: <strong>07 Mar - 13 Mar 2026</strong></p>
+            <div class="levy-hero"><span class="levy-number">34.89%</span><span class="levy-label">Fuel Levy</span></div>
+            <table class="details">
+                <tr><td>Avg Diesel TGP</td><td><strong>$1.7304/L</strong></td></tr>
+                <tr><td>Base Price</td><td>$0.80/L</td></tr>
+                <tr><td>Price Movement</td><td>+116.30%</td></tr>
+                <tr><td>Fuel Weighting</td><td>30%</td></tr>
+            </table>
+            <details><summary>Terminal Breakdown</summary>
+                <table class="terminals"><tr><th>Terminal</th><th>Avg cpl</th></tr><tr><td>Adelaide</td><td>171.70</td></tr><tr><td>Brisbane</td><td>172.28</td></tr><tr><td>Darwin</td><td>177.02</td></tr><tr><td>Hobart</td><td>175.14</td></tr><tr><td>Melbourne</td><td>171.58</td></tr><tr><td>Perth</td><td>171.02</td></tr><tr><td>Sydney</td><td>172.56</td></tr>
+                <tr class="total"><td>Average</td><td><strong>173.04</strong></td></tr></table>
+            </details>
+        </div>
+        <div class="card" style="border-top:4px solid #C49B3B;">
+            <h2>Monthly</h2>
+            <p class="subtitle">01-02-2026 - 28-02-2026 (20 trading days)</p>
+            <p class="applicable">Applicable to: <strong>March 2026</strong></p>
+            <div class="levy-hero"><span class="levy-number">31.51%</span><span class="levy-label">Fuel Levy</span></div>
+            <table class="details">
+                <tr><td>Avg Diesel TGP</td><td><strong>$1.6404/L</strong></td></tr>
+                <tr><td>Base Price</td><td>$0.80/L</td></tr>
+                <tr><td>Price Movement</td><td>+105.05%</td></tr>
+                <tr><td>Fuel Weighting</td><td>30%</td></tr>
+            </table>
+            <details><summary>Terminal Breakdown</summary>
+                <table class="terminals"><tr><th>Terminal</th><th>Avg cpl</th></tr><tr><td>Adelaide</td><td>162.82</td></tr><tr><td>Brisbane</td><td>163.05</td></tr><tr><td>Darwin</td><td>167.70</td></tr><tr><td>Hobart</td><td>166.90</td></tr><tr><td>Melbourne</td><td>162.91</td></tr><tr><td>Perth</td><td>161.76</td></tr><tr><td>Sydney</td><td>163.14</td></tr>
+                <tr class="total"><td>Average</td><td><strong>164.04</strong></td></tr></table>
+            </details>
+        </div></div>
+        <div class="history-section">
+            <h2>Levy History (from January 2026)</h2>
+            
+            <div class="chart-card" style="padding:16px;">
+                <h3 style="margin-bottom:8px;">Daily Fuel Levy Trend</h3>
+                <div style="position:relative;">
+                    <svg class="trendChart" viewBox="0 0 960 280" style="width:100%;height:auto;display:block;">
+                        <line x1="55" y1="235.0" x2="945" y2="235.0" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="235.0" text-anchor="end" fill="#999" font-size="11" dy="4">26.8%</text>
+<line x1="55" y1="182.5" x2="945" y2="182.5" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="182.5" text-anchor="end" fill="#999" font-size="11" dy="4">33.8%</text>
+<line x1="55" y1="130.0" x2="945" y2="130.0" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="130.0" text-anchor="end" fill="#999" font-size="11" dy="4">40.8%</text>
+<line x1="55" y1="77.5" x2="945" y2="77.5" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="77.5" text-anchor="end" fill="#999" font-size="11" dy="4">47.7%</text>
+<line x1="55" y1="25.0" x2="945" y2="25.0" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="25.0" text-anchor="end" fill="#999" font-size="11" dy="4">54.7%</text>
+
+                        <path d="M 55.0,235 L 55.0,215.3 L 73.9,215.6 L 92.9,215.9 L 111.8,216.2 L 130.7,216.6 L 149.7,217.1 L 168.6,218.3 L 187.6,219.5 L 206.5,219.9 L 225.4,219.4 L 244.4,218.8 L 263.3,216.1 L 282.2,213.0 L 301.2,211.9 L 320.1,208.8 L 339.0,207.6 L 358.0,206.7 L 376.9,205.6 L 395.9,205.6 L 414.8,204.4 L 433.7,204.6 L 452.7,205.2 L 471.6,202.4 L 490.5,202.3 L 509.5,201.4 L 528.4,201.1 L 547.3,200.6 L 566.3,199.8 L 585.2,199.2 L 604.1,198.8 L 623.1,198.9 L 642.0,198.7 L 661.0,199.0 L 679.9,200.0 L 698.8,201.9 L 717.8,202.6 L 736.7,203.4 L 755.6,202.6 L 774.6,199.5 L 793.5,195.4 L 812.4,193.7 L 831.4,192.6 L 850.3,191.7 L 869.3,190.9 L 888.2,182.1 L 907.1,169.9 L 926.1,136.5 L 945.0,40.1 L 945.0,235 Z" fill="#C17F4E" fill-opacity="0.08"/>
+                        <polyline points="55.0,215.3 73.9,215.6 92.9,215.9 111.8,216.2 130.7,216.6 149.7,217.1 168.6,218.3 187.6,219.5 206.5,219.9 225.4,219.4 244.4,218.8 263.3,216.1 282.2,213.0 301.2,211.9 320.1,208.8 339.0,207.6 358.0,206.7 376.9,205.6 395.9,205.6 414.8,204.4 433.7,204.6 452.7,205.2 471.6,202.4 490.5,202.3 509.5,201.4 528.4,201.1 547.3,200.6 566.3,199.8 585.2,199.2 604.1,198.8 623.1,198.9 642.0,198.7 661.0,199.0 679.9,200.0 698.8,201.9 717.8,202.6 736.7,203.4 755.6,202.6 774.6,199.5 793.5,195.4 812.4,193.7 831.4,192.6 850.3,191.7 869.3,190.9 888.2,182.1 907.1,169.9 926.1,136.5 945.0,40.1" fill="none" stroke="#C17F4E" stroke-width="2.5" stroke-linejoin="round"/>
+                        <text x="55.0" y="215.3" dy="-10" text-anchor="start" fill="#1C1F26" font-size="11" font-weight="600">29.44%</text>
+<text x="945.0" y="40.1" dy="-10" text-anchor="end" fill="#1C1F26" font-size="11" font-weight="600">52.69%</text>
+
+                        <text x="55.0" y="274" text-anchor="middle" fill="#999" font-size="10">01-01</text>
+<text x="130.7" y="274" text-anchor="middle" fill="#999" font-size="10">07-01</text>
+<text x="206.5" y="274" text-anchor="middle" fill="#999" font-size="10">13-01</text>
+<text x="282.2" y="274" text-anchor="middle" fill="#999" font-size="10">19-01</text>
+<text x="358.0" y="274" text-anchor="middle" fill="#999" font-size="10">23-01</text>
+<text x="433.7" y="274" text-anchor="middle" fill="#999" font-size="10">29-01</text>
+<text x="509.5" y="274" text-anchor="middle" fill="#999" font-size="10">04-02</text>
+<text x="585.2" y="274" text-anchor="middle" fill="#999" font-size="10">10-02</text>
+<text x="661.0" y="274" text-anchor="middle" fill="#999" font-size="10">16-02</text>
+<text x="736.7" y="274" text-anchor="middle" fill="#999" font-size="10">20-02</text>
+<text x="812.4" y="274" text-anchor="middle" fill="#999" font-size="10">26-02</text>
+<text x="888.2" y="274" text-anchor="middle" fill="#999" font-size="10">04-03</text>
+<text x="945.0" y="274" text-anchor="middle" fill="#999" font-size="10">10-03</text>
+
+                        <circle class="hoverDot" cx="0" cy="0" r="5" fill="#C17F4E" stroke="#fff" stroke-width="2" style="display:none;pointer-events:none;"/>
+                        <line class="hoverLine" x1="0" y1="25" x2="0" y2="235" stroke="#C17F4E" stroke-width="1" stroke-dasharray="4,3" style="display:none;pointer-events:none;"/>
+                        <rect x="45.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="55.0" data-y="215.3" data-levy="29.44" data-date="01-01-2026" data-tgp="1.5851"/>
+<rect x="64.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="73.9" data-y="215.6" data-levy="29.41" data-date="02-01-2026" data-tgp="1.5844"/>
+<rect x="83.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="92.9" data-y="215.9" data-levy="29.37" data-date="05-01-2026" data-tgp="1.5833"/>
+<rect x="102.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="111.8" data-y="216.2" data-levy="29.32" data-date="06-01-2026" data-tgp="1.5819"/>
+<rect x="121.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="130.7" data-y="216.6" data-levy="29.27" data-date="07-01-2026" data-tgp="1.5806"/>
+<rect x="140.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="149.7" data-y="217.1" data-levy="29.21" data-date="08-01-2026" data-tgp="1.5790"/>
+<rect x="159.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="168.6" data-y="218.3" data-levy="29.05" data-date="09-01-2026" data-tgp="1.5746"/>
+<rect x="178.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="187.6" data-y="219.5" data-levy="28.89" data-date="12-01-2026" data-tgp="1.5703"/>
+<rect x="197.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="206.5" data-y="219.9" data-levy="28.83" data-date="13-01-2026" data-tgp="1.5689"/>
+<rect x="216.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="225.4" data-y="219.4" data-levy="28.90" data-date="14-01-2026" data-tgp="1.5707"/>
+<rect x="234.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="244.4" data-y="218.8" data-levy="28.98" data-date="15-01-2026" data-tgp="1.5729"/>
+<rect x="253.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="263.3" data-y="216.1" data-levy="29.34" data-date="16-01-2026" data-tgp="1.5823"/>
+<rect x="272.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="282.2" data-y="213.0" data-levy="29.75" data-date="19-01-2026" data-tgp="1.5934"/>
+<rect x="291.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="301.2" data-y="211.9" data-levy="29.89" data-date="20-01-2026" data-tgp="1.5970"/>
+<rect x="310.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="320.1" data-y="208.8" data-levy="30.30" data-date="21-01-2026" data-tgp="1.6080"/>
+<rect x="329.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="339.0" data-y="207.6" data-levy="30.47" data-date="22-01-2026" data-tgp="1.6126"/>
+<rect x="348.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="358.0" data-y="206.7" data-levy="30.59" data-date="23-01-2026" data-tgp="1.6156"/>
+<rect x="367.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="376.9" data-y="205.6" data-levy="30.73" data-date="26-01-2026" data-tgp="1.6194"/>
+<rect x="386.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="395.9" data-y="205.6" data-levy="30.73" data-date="27-01-2026" data-tgp="1.6194"/>
+<rect x="405.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="414.8" data-y="204.4" data-levy="30.89" data-date="28-01-2026" data-tgp="1.6236"/>
+<rect x="424.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="433.7" data-y="204.6" data-levy="30.86" data-date="29-01-2026" data-tgp="1.6229"/>
+<rect x="443.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="452.7" data-y="205.2" data-levy="30.79" data-date="30-01-2026" data-tgp="1.6211"/>
+<rect x="462.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="471.6" data-y="202.4" data-levy="31.15" data-date="02-02-2026" data-tgp="1.6306"/>
+<rect x="481.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="490.5" data-y="202.3" data-levy="31.17" data-date="03-02-2026" data-tgp="1.6311"/>
+<rect x="500.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="509.5" data-y="201.4" data-levy="31.29" data-date="04-02-2026" data-tgp="1.6343"/>
+<rect x="518.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="528.4" data-y="201.1" data-levy="31.33" data-date="05-02-2026" data-tgp="1.6356"/>
+<rect x="537.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="547.3" data-y="200.6" data-levy="31.40" data-date="06-02-2026" data-tgp="1.6373"/>
+<rect x="556.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="566.3" data-y="199.8" data-levy="31.50" data-date="09-02-2026" data-tgp="1.6399"/>
+<rect x="575.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="585.2" data-y="199.2" data-levy="31.58" data-date="10-02-2026" data-tgp="1.6421"/>
+<rect x="594.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="604.1" data-y="198.8" data-levy="31.63" data-date="11-02-2026" data-tgp="1.6434"/>
+<rect x="613.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="623.1" data-y="198.9" data-levy="31.62" data-date="12-02-2026" data-tgp="1.6433"/>
+<rect x="632.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="642.0" data-y="198.7" data-levy="31.64" data-date="13-02-2026" data-tgp="1.6437"/>
+<rect x="651.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="661.0" data-y="199.0" data-levy="31.61" data-date="16-02-2026" data-tgp="1.6430"/>
+<rect x="670.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="679.9" data-y="200.0" data-levy="31.47" data-date="17-02-2026" data-tgp="1.6393"/>
+<rect x="689.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="698.8" data-y="201.9" data-levy="31.22" data-date="18-02-2026" data-tgp="1.6326"/>
+<rect x="708.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="717.8" data-y="202.6" data-levy="31.13" data-date="19-02-2026" data-tgp="1.6301"/>
+<rect x="727.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="736.7" data-y="203.4" data-levy="31.02" data-date="20-02-2026" data-tgp="1.6271"/>
+<rect x="746.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="755.6" data-y="202.6" data-levy="31.13" data-date="23-02-2026" data-tgp="1.6301"/>
+<rect x="765.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="774.6" data-y="199.5" data-levy="31.54" data-date="24-02-2026" data-tgp="1.6411"/>
+<rect x="784.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="793.5" data-y="195.4" data-levy="32.09" data-date="25-02-2026" data-tgp="1.6556"/>
+<rect x="803.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="812.4" data-y="193.7" data-levy="32.31" data-date="26-02-2026" data-tgp="1.6617"/>
+<rect x="821.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="831.4" data-y="192.6" data-levy="32.46" data-date="27-02-2026" data-tgp="1.6657"/>
+<rect x="840.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="850.3" data-y="191.7" data-levy="32.57" data-date="02-03-2026" data-tgp="1.6686"/>
+<rect x="859.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="869.3" data-y="190.9" data-levy="32.68" data-date="03-03-2026" data-tgp="1.6714"/>
+<rect x="878.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="888.2" data-y="182.1" data-levy="33.85" data-date="04-03-2026" data-tgp="1.7027"/>
+<rect x="897.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="907.1" data-y="169.9" data-levy="35.46" data-date="05-03-2026" data-tgp="1.7456"/>
+<rect x="916.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="926.1" data-y="136.5" data-levy="39.90" data-date="06-03-2026" data-tgp="1.8639"/>
+<rect x="935.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="945.0" data-y="40.1" data-levy="52.69" data-date="10-03-2026" data-tgp="2.2050"/>
+
+                    </svg>
+                    <div class="chart-tooltip" style="display:none;position:absolute;background:#1C1F26;color:#F5F5F3;padding:8px 12px;border-radius:6px;font-size:13px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:10;"></div>
+                </div>
+            </div>
+            <div class="tabs">
+                <button class="tab active" onclick="switchHistoryTab('global','daily')">Daily</button>
+                <button class="tab" onclick="switchHistoryTab('global','weekly')">Weekly</button>
+                <button class="tab" onclick="switchHistoryTab('global','monthly')">Monthly</button>
+            </div>
+            <div id="global-daily" class="htab-content htab-global active">
+                <table class="history"><tr><th>Date</th><th>Avg TGP ($/L)</th><th>Fuel Levy</th></tr><tr><td>10-03-2026</td><td>$2.2050/L</td><td><strong>52.69%</strong></td></tr>
+<tr><td>06-03-2026</td><td>$1.8639/L</td><td><strong>39.90%</strong></td></tr>
+<tr><td>05-03-2026</td><td>$1.7456/L</td><td><strong>35.46%</strong></td></tr>
+<tr><td>04-03-2026</td><td>$1.7027/L</td><td><strong>33.85%</strong></td></tr>
+<tr><td>03-03-2026</td><td>$1.6714/L</td><td><strong>32.68%</strong></td></tr>
+<tr><td>02-03-2026</td><td>$1.6686/L</td><td><strong>32.57%</strong></td></tr>
+<tr><td>27-02-2026</td><td>$1.6657/L</td><td><strong>32.46%</strong></td></tr>
+<tr><td>26-02-2026</td><td>$1.6617/L</td><td><strong>32.31%</strong></td></tr>
+<tr><td>25-02-2026</td><td>$1.6556/L</td><td><strong>32.09%</strong></td></tr>
+<tr><td>24-02-2026</td><td>$1.6411/L</td><td><strong>31.54%</strong></td></tr>
+<tr><td>23-02-2026</td><td>$1.6301/L</td><td><strong>31.13%</strong></td></tr>
+<tr><td>20-02-2026</td><td>$1.6271/L</td><td><strong>31.02%</strong></td></tr>
+<tr><td>19-02-2026</td><td>$1.6301/L</td><td><strong>31.13%</strong></td></tr>
+<tr><td>18-02-2026</td><td>$1.6326/L</td><td><strong>31.22%</strong></td></tr>
+<tr><td>17-02-2026</td><td>$1.6393/L</td><td><strong>31.47%</strong></td></tr>
+<tr><td>16-02-2026</td><td>$1.6430/L</td><td><strong>31.61%</strong></td></tr>
+<tr><td>13-02-2026</td><td>$1.6437/L</td><td><strong>31.64%</strong></td></tr>
+<tr><td>12-02-2026</td><td>$1.6433/L</td><td><strong>31.62%</strong></td></tr>
+<tr><td>11-02-2026</td><td>$1.6434/L</td><td><strong>31.63%</strong></td></tr>
+<tr><td>10-02-2026</td><td>$1.6421/L</td><td><strong>31.58%</strong></td></tr>
+<tr><td>09-02-2026</td><td>$1.6399/L</td><td><strong>31.50%</strong></td></tr>
+<tr><td>06-02-2026</td><td>$1.6373/L</td><td><strong>31.40%</strong></td></tr>
+<tr><td>05-02-2026</td><td>$1.6356/L</td><td><strong>31.33%</strong></td></tr>
+<tr><td>04-02-2026</td><td>$1.6343/L</td><td><strong>31.29%</strong></td></tr>
+<tr><td>03-02-2026</td><td>$1.6311/L</td><td><strong>31.17%</strong></td></tr>
+<tr><td>02-02-2026</td><td>$1.6306/L</td><td><strong>31.15%</strong></td></tr>
+<tr><td>30-01-2026</td><td>$1.6211/L</td><td><strong>30.79%</strong></td></tr>
+<tr><td>29-01-2026</td><td>$1.6229/L</td><td><strong>30.86%</strong></td></tr>
+<tr><td>28-01-2026</td><td>$1.6236/L</td><td><strong>30.89%</strong></td></tr>
+<tr><td>27-01-2026</td><td>$1.6194/L</td><td><strong>30.73%</strong></td></tr>
+<tr><td>26-01-2026</td><td>$1.6194/L</td><td><strong>30.73%</strong></td></tr>
+<tr><td>23-01-2026</td><td>$1.6156/L</td><td><strong>30.59%</strong></td></tr>
+<tr><td>22-01-2026</td><td>$1.6126/L</td><td><strong>30.47%</strong></td></tr>
+<tr><td>21-01-2026</td><td>$1.6080/L</td><td><strong>30.30%</strong></td></tr>
+<tr><td>20-01-2026</td><td>$1.5970/L</td><td><strong>29.89%</strong></td></tr>
+<tr><td>19-01-2026</td><td>$1.5934/L</td><td><strong>29.75%</strong></td></tr>
+<tr><td>16-01-2026</td><td>$1.5823/L</td><td><strong>29.34%</strong></td></tr>
+<tr><td>15-01-2026</td><td>$1.5729/L</td><td><strong>28.98%</strong></td></tr>
+<tr><td>14-01-2026</td><td>$1.5707/L</td><td><strong>28.90%</strong></td></tr>
+<tr><td>13-01-2026</td><td>$1.5689/L</td><td><strong>28.83%</strong></td></tr>
+<tr><td>12-01-2026</td><td>$1.5703/L</td><td><strong>28.89%</strong></td></tr>
+<tr><td>09-01-2026</td><td>$1.5746/L</td><td><strong>29.05%</strong></td></tr>
+<tr><td>08-01-2026</td><td>$1.5790/L</td><td><strong>29.21%</strong></td></tr>
+<tr><td>07-01-2026</td><td>$1.5806/L</td><td><strong>29.27%</strong></td></tr>
+<tr><td>06-01-2026</td><td>$1.5819/L</td><td><strong>29.32%</strong></td></tr>
+<tr><td>05-01-2026</td><td>$1.5833/L</td><td><strong>29.37%</strong></td></tr>
+<tr><td>02-01-2026</td><td>$1.5844/L</td><td><strong>29.41%</strong></td></tr>
+<tr><td>01-01-2026</td><td>$1.5851/L</td><td><strong>29.44%</strong></td></tr>
+</table>
+            </div>
+            <div id="global-weekly" class="htab-content htab-global">
+                <table class="history"><tr><th>Period Start</th><th>Period End</th><th>Applicable To</th><th>Avg TGP ($/L)</th><th>Fuel Levy</th><th>Days</th></tr><tr><td>28-02-2026</td><td>06-03-2026</td><td>07 Mar - 13 Mar 2026</td><td>$1.7304/L</td><td><strong>34.89%</strong></td><td>5</td></tr>
+<tr><td>21-02-2026</td><td>27-02-2026</td><td>28 Feb - 06 Mar 2026</td><td>$1.6509/L</td><td><strong>31.91%</strong></td><td>5</td></tr>
+<tr><td>14-02-2026</td><td>20-02-2026</td><td>21 Feb - 27 Feb 2026</td><td>$1.6344/L</td><td><strong>31.29%</strong></td><td>5</td></tr>
+<tr><td>07-02-2026</td><td>13-02-2026</td><td>14 Feb - 20 Feb 2026</td><td>$1.6425/L</td><td><strong>31.59%</strong></td><td>5</td></tr>
+<tr><td>31-01-2026</td><td>06-02-2026</td><td>07 Feb - 13 Feb 2026</td><td>$1.6338/L</td><td><strong>31.27%</strong></td><td>5</td></tr>
+<tr><td>24-01-2026</td><td>30-01-2026</td><td>31 Jan - 06 Feb 2026</td><td>$1.6213/L</td><td><strong>30.80%</strong></td><td>5</td></tr>
+<tr><td>17-01-2026</td><td>23-01-2026</td><td>24 Jan - 30 Jan 2026</td><td>$1.6053/L</td><td><strong>30.20%</strong></td><td>5</td></tr>
+<tr><td>10-01-2026</td><td>16-01-2026</td><td>17 Jan - 23 Jan 2026</td><td>$1.5730/L</td><td><strong>28.99%</strong></td><td>5</td></tr>
+<tr><td>03-01-2026</td><td>09-01-2026</td><td>10 Jan - 16 Jan 2026</td><td>$1.5799/L</td><td><strong>29.25%</strong></td><td>5</td></tr>
+</table>
+            </div>
+            <div id="global-monthly" class="htab-content htab-global">
+                <table class="history"><tr><th>Period Start</th><th>Period End</th><th>Applicable To</th><th>Avg TGP ($/L)</th><th>Fuel Levy</th><th>Days</th></tr><tr><td>01-02-2026</td><td>28-02-2026</td><td>March 2026</td><td>$1.6404/L</td><td><strong>31.51%</strong></td><td>20</td></tr>
+<tr><td>01-01-2026</td><td>31-01-2026</td><td>February 2026</td><td>$1.5939/L</td><td><strong>29.77%</strong></td><td>22</td></tr>
+</table>
+            </div>
+        </div></div>
+<div id="page-dollar" class="page-content" style="display:none;">
+        <div class="formula">Fuel Levy = <code>((Avg Diesel TGP - Base $1.00/L) / Base) x 30% weighting</code></div>
+        <div class="grid">
+        <div class="card" style="border-top:4px solid #C17F4E;">
+            <h2>Daily</h2>
+            <p class="subtitle">10-03-2026</p>
+            <p class="applicable">Applicable to: <strong>10-03-2026</strong></p>
+            <div class="levy-hero"><span class="levy-number">36.15%</span><span class="levy-label">Fuel Levy</span></div>
+            <table class="details">
+                <tr><td>Avg Diesel TGP</td><td><strong>$2.2050/L</strong></td></tr>
+                <tr><td>Base Price</td><td>$1.00/L</td></tr>
+                <tr><td>Price Movement</td><td>+120.50%</td></tr>
+                <tr><td>Fuel Weighting</td><td>30%</td></tr>
+            </table>
+            <details><summary>Terminal Breakdown</summary>
+                <table class="terminals"><tr><th>Terminal</th><th>Avg cpl</th></tr><tr><td>Adelaide</td><td>220.66</td></tr><tr><td>Brisbane</td><td>220.81</td></tr><tr><td>Darwin</td><td>225.31</td></tr><tr><td>Hobart</td><td>217.40</td></tr><tr><td>Melbourne</td><td>218.52</td></tr><tr><td>Perth</td><td>219.55</td></tr><tr><td>Sydney</td><td>221.22</td></tr>
+                <tr class="total"><td>Average</td><td><strong>220.50</strong></td></tr></table>
+            </details>
+        </div>
+        <div class="card" style="border-top:4px solid #3B8A6A;">
+            <h2>Weekly</h2>
+            <p class="subtitle">28-02-2026 - 06-03-2026 (5 trading days)</p>
+            <p class="applicable">Applicable to: <strong>07 Mar - 13 Mar 2026</strong></p>
+            <div class="levy-hero"><span class="levy-number">21.91%</span><span class="levy-label">Fuel Levy</span></div>
+            <table class="details">
+                <tr><td>Avg Diesel TGP</td><td><strong>$1.7304/L</strong></td></tr>
+                <tr><td>Base Price</td><td>$1.00/L</td></tr>
+                <tr><td>Price Movement</td><td>+73.04%</td></tr>
+                <tr><td>Fuel Weighting</td><td>30%</td></tr>
+            </table>
+            <details><summary>Terminal Breakdown</summary>
+                <table class="terminals"><tr><th>Terminal</th><th>Avg cpl</th></tr><tr><td>Adelaide</td><td>171.70</td></tr><tr><td>Brisbane</td><td>172.28</td></tr><tr><td>Darwin</td><td>177.02</td></tr><tr><td>Hobart</td><td>175.14</td></tr><tr><td>Melbourne</td><td>171.58</td></tr><tr><td>Perth</td><td>171.02</td></tr><tr><td>Sydney</td><td>172.56</td></tr>
+                <tr class="total"><td>Average</td><td><strong>173.04</strong></td></tr></table>
+            </details>
+        </div>
+        <div class="card" style="border-top:4px solid #C49B3B;">
+            <h2>Monthly</h2>
+            <p class="subtitle">01-02-2026 - 28-02-2026 (20 trading days)</p>
+            <p class="applicable">Applicable to: <strong>March 2026</strong></p>
+            <div class="levy-hero"><span class="levy-number">19.21%</span><span class="levy-label">Fuel Levy</span></div>
+            <table class="details">
+                <tr><td>Avg Diesel TGP</td><td><strong>$1.6404/L</strong></td></tr>
+                <tr><td>Base Price</td><td>$1.00/L</td></tr>
+                <tr><td>Price Movement</td><td>+64.04%</td></tr>
+                <tr><td>Fuel Weighting</td><td>30%</td></tr>
+            </table>
+            <details><summary>Terminal Breakdown</summary>
+                <table class="terminals"><tr><th>Terminal</th><th>Avg cpl</th></tr><tr><td>Adelaide</td><td>162.82</td></tr><tr><td>Brisbane</td><td>163.05</td></tr><tr><td>Darwin</td><td>167.70</td></tr><tr><td>Hobart</td><td>166.90</td></tr><tr><td>Melbourne</td><td>162.91</td></tr><tr><td>Perth</td><td>161.76</td></tr><tr><td>Sydney</td><td>163.14</td></tr>
+                <tr class="total"><td>Average</td><td><strong>164.04</strong></td></tr></table>
+            </details>
+        </div></div>
+        <div class="history-section">
+            <h2>Levy History (from January 2026)</h2>
+            
+            <div class="chart-card" style="padding:16px;">
+                <h3 style="margin-bottom:8px;">Daily Fuel Levy Trend</h3>
+                <div style="position:relative;">
+                    <svg class="trendChart" viewBox="0 0 960 280" style="width:100%;height:auto;display:block;">
+                        <line x1="55" y1="235.0" x2="945" y2="235.0" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="235.0" text-anchor="end" fill="#999" font-size="11" dy="4">15.1%</text>
+<line x1="55" y1="182.5" x2="945" y2="182.5" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="182.5" text-anchor="end" fill="#999" font-size="11" dy="4">20.8%</text>
+<line x1="55" y1="130.0" x2="945" y2="130.0" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="130.0" text-anchor="end" fill="#999" font-size="11" dy="4">26.6%</text>
+<line x1="55" y1="77.5" x2="945" y2="77.5" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="77.5" text-anchor="end" fill="#999" font-size="11" dy="4">32.4%</text>
+<line x1="55" y1="25.0" x2="945" y2="25.0" stroke="#E0DDD8" stroke-width="1"/>
+<text x="47" y="25.0" text-anchor="end" fill="#999" font-size="11" dy="4">38.1%</text>
+
+                        <path d="M 55.0,235 L 55.0,212.4 L 73.9,212.6 L 92.9,212.9 L 111.8,213.3 L 130.7,213.6 L 149.7,214.1 L 168.6,215.3 L 187.6,216.4 L 206.5,216.8 L 225.4,216.3 L 244.4,215.7 L 263.3,213.2 L 282.2,210.2 L 301.2,209.2 L 320.1,206.2 L 339.0,204.9 L 358.0,204.1 L 376.9,203.1 L 395.9,203.1 L 414.8,201.9 L 433.7,202.1 L 452.7,202.6 L 471.6,200.0 L 490.5,199.9 L 509.5,199.0 L 528.4,198.6 L 547.3,198.1 L 566.3,197.4 L 585.2,196.9 L 604.1,196.5 L 623.1,196.5 L 642.0,196.4 L 661.0,196.6 L 679.9,197.6 L 698.8,199.4 L 717.8,200.2 L 736.7,201.0 L 755.6,200.2 L 774.6,197.1 L 793.5,193.1 L 812.4,191.5 L 831.4,190.4 L 850.3,189.6 L 869.3,188.9 L 888.2,180.3 L 907.1,168.6 L 926.1,136.3 L 945.0,43.2 L 945.0,235 Z" fill="#C17F4E" fill-opacity="0.08"/>
+                        <polyline points="55.0,212.4 73.9,212.6 92.9,212.9 111.8,213.3 130.7,213.6 149.7,214.1 168.6,215.3 187.6,216.4 206.5,216.8 225.4,216.3 244.4,215.7 263.3,213.2 282.2,210.2 301.2,209.2 320.1,206.2 339.0,204.9 358.0,204.1 376.9,203.1 395.9,203.1 414.8,201.9 433.7,202.1 452.7,202.6 471.6,200.0 490.5,199.9 509.5,199.0 528.4,198.6 547.3,198.1 566.3,197.4 585.2,196.9 604.1,196.5 623.1,196.5 642.0,196.4 661.0,196.6 679.9,197.6 698.8,199.4 717.8,200.2 736.7,201.0 755.6,200.2 774.6,197.1 793.5,193.1 812.4,191.5 831.4,190.4 850.3,189.6 869.3,188.9 888.2,180.3 907.1,168.6 926.1,136.3 945.0,43.2" fill="none" stroke="#C17F4E" stroke-width="2.5" stroke-linejoin="round"/>
+                        <text x="55.0" y="212.4" dy="-10" text-anchor="start" fill="#1C1F26" font-size="11" font-weight="600">17.55%</text>
+<text x="945.0" y="43.2" dy="-10" text-anchor="end" fill="#1C1F26" font-size="11" font-weight="600">36.15%</text>
+
+                        <text x="55.0" y="274" text-anchor="middle" fill="#999" font-size="10">01-01</text>
+<text x="130.7" y="274" text-anchor="middle" fill="#999" font-size="10">07-01</text>
+<text x="206.5" y="274" text-anchor="middle" fill="#999" font-size="10">13-01</text>
+<text x="282.2" y="274" text-anchor="middle" fill="#999" font-size="10">19-01</text>
+<text x="358.0" y="274" text-anchor="middle" fill="#999" font-size="10">23-01</text>
+<text x="433.7" y="274" text-anchor="middle" fill="#999" font-size="10">29-01</text>
+<text x="509.5" y="274" text-anchor="middle" fill="#999" font-size="10">04-02</text>
+<text x="585.2" y="274" text-anchor="middle" fill="#999" font-size="10">10-02</text>
+<text x="661.0" y="274" text-anchor="middle" fill="#999" font-size="10">16-02</text>
+<text x="736.7" y="274" text-anchor="middle" fill="#999" font-size="10">20-02</text>
+<text x="812.4" y="274" text-anchor="middle" fill="#999" font-size="10">26-02</text>
+<text x="888.2" y="274" text-anchor="middle" fill="#999" font-size="10">04-03</text>
+<text x="945.0" y="274" text-anchor="middle" fill="#999" font-size="10">10-03</text>
+
+                        <circle class="hoverDot" cx="0" cy="0" r="5" fill="#C17F4E" stroke="#fff" stroke-width="2" style="display:none;pointer-events:none;"/>
+                        <line class="hoverLine" x1="0" y1="25" x2="0" y2="235" stroke="#C17F4E" stroke-width="1" stroke-dasharray="4,3" style="display:none;pointer-events:none;"/>
+                        <rect x="45.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="55.0" data-y="212.4" data-levy="17.55" data-date="01-01-2026" data-tgp="1.5851"/>
+<rect x="64.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="73.9" data-y="212.6" data-levy="17.53" data-date="02-01-2026" data-tgp="1.5844"/>
+<rect x="83.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="92.9" data-y="212.9" data-levy="17.50" data-date="05-01-2026" data-tgp="1.5833"/>
+<rect x="102.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="111.8" data-y="213.3" data-levy="17.46" data-date="06-01-2026" data-tgp="1.5819"/>
+<rect x="121.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="130.7" data-y="213.6" data-levy="17.42" data-date="07-01-2026" data-tgp="1.5806"/>
+<rect x="140.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="149.7" data-y="214.1" data-levy="17.37" data-date="08-01-2026" data-tgp="1.5790"/>
+<rect x="159.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="168.6" data-y="215.3" data-levy="17.24" data-date="09-01-2026" data-tgp="1.5746"/>
+<rect x="178.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="187.6" data-y="216.4" data-levy="17.11" data-date="12-01-2026" data-tgp="1.5703"/>
+<rect x="197.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="206.5" data-y="216.8" data-levy="17.07" data-date="13-01-2026" data-tgp="1.5689"/>
+<rect x="216.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="225.4" data-y="216.3" data-levy="17.12" data-date="14-01-2026" data-tgp="1.5707"/>
+<rect x="234.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="244.4" data-y="215.7" data-levy="17.19" data-date="15-01-2026" data-tgp="1.5729"/>
+<rect x="253.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="263.3" data-y="213.2" data-levy="17.47" data-date="16-01-2026" data-tgp="1.5823"/>
+<rect x="272.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="282.2" data-y="210.2" data-levy="17.80" data-date="19-01-2026" data-tgp="1.5934"/>
+<rect x="291.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="301.2" data-y="209.2" data-levy="17.91" data-date="20-01-2026" data-tgp="1.5970"/>
+<rect x="310.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="320.1" data-y="206.2" data-levy="18.24" data-date="21-01-2026" data-tgp="1.6080"/>
+<rect x="329.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="339.0" data-y="204.9" data-levy="18.38" data-date="22-01-2026" data-tgp="1.6126"/>
+<rect x="348.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="358.0" data-y="204.1" data-levy="18.47" data-date="23-01-2026" data-tgp="1.6156"/>
+<rect x="367.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="376.9" data-y="203.1" data-levy="18.58" data-date="26-01-2026" data-tgp="1.6194"/>
+<rect x="386.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="395.9" data-y="203.1" data-levy="18.58" data-date="27-01-2026" data-tgp="1.6194"/>
+<rect x="405.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="414.8" data-y="201.9" data-levy="18.71" data-date="28-01-2026" data-tgp="1.6236"/>
+<rect x="424.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="433.7" data-y="202.1" data-levy="18.69" data-date="29-01-2026" data-tgp="1.6229"/>
+<rect x="443.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="452.7" data-y="202.6" data-levy="18.63" data-date="30-01-2026" data-tgp="1.6211"/>
+<rect x="462.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="471.6" data-y="200.0" data-levy="18.92" data-date="02-02-2026" data-tgp="1.6306"/>
+<rect x="481.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="490.5" data-y="199.9" data-levy="18.93" data-date="03-02-2026" data-tgp="1.6311"/>
+<rect x="500.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="509.5" data-y="199.0" data-levy="19.03" data-date="04-02-2026" data-tgp="1.6343"/>
+<rect x="518.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="528.4" data-y="198.6" data-levy="19.07" data-date="05-02-2026" data-tgp="1.6356"/>
+<rect x="537.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="547.3" data-y="198.1" data-levy="19.12" data-date="06-02-2026" data-tgp="1.6373"/>
+<rect x="556.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="566.3" data-y="197.4" data-levy="19.20" data-date="09-02-2026" data-tgp="1.6399"/>
+<rect x="575.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="585.2" data-y="196.9" data-levy="19.26" data-date="10-02-2026" data-tgp="1.6421"/>
+<rect x="594.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="604.1" data-y="196.5" data-levy="19.30" data-date="11-02-2026" data-tgp="1.6434"/>
+<rect x="613.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="623.1" data-y="196.5" data-levy="19.30" data-date="12-02-2026" data-tgp="1.6433"/>
+<rect x="632.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="642.0" data-y="196.4" data-levy="19.31" data-date="13-02-2026" data-tgp="1.6437"/>
+<rect x="651.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="661.0" data-y="196.6" data-levy="19.29" data-date="16-02-2026" data-tgp="1.6430"/>
+<rect x="670.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="679.9" data-y="197.6" data-levy="19.18" data-date="17-02-2026" data-tgp="1.6393"/>
+<rect x="689.4" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="698.8" data-y="199.4" data-levy="18.98" data-date="18-02-2026" data-tgp="1.6326"/>
+<rect x="708.3" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="717.8" data-y="200.2" data-levy="18.90" data-date="19-02-2026" data-tgp="1.6301"/>
+<rect x="727.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="736.7" data-y="201.0" data-levy="18.81" data-date="20-02-2026" data-tgp="1.6271"/>
+<rect x="746.2" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="755.6" data-y="200.2" data-levy="18.90" data-date="23-02-2026" data-tgp="1.6301"/>
+<rect x="765.1" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="774.6" data-y="197.1" data-levy="19.23" data-date="24-02-2026" data-tgp="1.6411"/>
+<rect x="784.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="793.5" data-y="193.1" data-levy="19.67" data-date="25-02-2026" data-tgp="1.6556"/>
+<rect x="803.0" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="812.4" data-y="191.5" data-levy="19.85" data-date="26-02-2026" data-tgp="1.6617"/>
+<rect x="821.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="831.4" data-y="190.4" data-levy="19.97" data-date="27-02-2026" data-tgp="1.6657"/>
+<rect x="840.9" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="850.3" data-y="189.6" data-levy="20.06" data-date="02-03-2026" data-tgp="1.6686"/>
+<rect x="859.8" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="869.3" data-y="188.9" data-levy="20.14" data-date="03-03-2026" data-tgp="1.6714"/>
+<rect x="878.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="888.2" data-y="180.3" data-levy="21.08" data-date="04-03-2026" data-tgp="1.7027"/>
+<rect x="897.7" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="907.1" data-y="168.6" data-levy="22.37" data-date="05-03-2026" data-tgp="1.7456"/>
+<rect x="916.6" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="926.1" data-y="136.3" data-levy="25.92" data-date="06-03-2026" data-tgp="1.8639"/>
+<rect x="935.5" y="25" width="18.9" height="210" fill="transparent" class="hover-target" data-x="945.0" data-y="43.2" data-levy="36.15" data-date="10-03-2026" data-tgp="2.2050"/>
+
+                    </svg>
+                    <div class="chart-tooltip" style="display:none;position:absolute;background:#1C1F26;color:#F5F5F3;padding:8px 12px;border-radius:6px;font-size:13px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:10;"></div>
+                </div>
+            </div>
+            <div class="tabs">
+                <button class="tab active" onclick="switchHistoryTab('dollar','daily')">Daily</button>
+                <button class="tab" onclick="switchHistoryTab('dollar','weekly')">Weekly</button>
+                <button class="tab" onclick="switchHistoryTab('dollar','monthly')">Monthly</button>
+            </div>
+            <div id="dollar-daily" class="htab-content htab-dollar active">
+                <table class="history"><tr><th>Date</th><th>Avg TGP ($/L)</th><th>Fuel Levy</th></tr><tr><td>10-03-2026</td><td>$2.2050/L</td><td><strong>36.15%</strong></td></tr>
+<tr><td>06-03-2026</td><td>$1.8639/L</td><td><strong>25.92%</strong></td></tr>
+<tr><td>05-03-2026</td><td>$1.7456/L</td><td><strong>22.37%</strong></td></tr>
+<tr><td>04-03-2026</td><td>$1.7027/L</td><td><strong>21.08%</strong></td></tr>
+<tr><td>03-03-2026</td><td>$1.6714/L</td><td><strong>20.14%</strong></td></tr>
+<tr><td>02-03-2026</td><td>$1.6686/L</td><td><strong>20.06%</strong></td></tr>
+<tr><td>27-02-2026</td><td>$1.6657/L</td><td><strong>19.97%</strong></td></tr>
+<tr><td>26-02-2026</td><td>$1.6617/L</td><td><strong>19.85%</strong></td></tr>
+<tr><td>25-02-2026</td><td>$1.6556/L</td><td><strong>19.67%</strong></td></tr>
+<tr><td>24-02-2026</td><td>$1.6411/L</td><td><strong>19.23%</strong></td></tr>
+<tr><td>23-02-2026</td><td>$1.6301/L</td><td><strong>18.90%</strong></td></tr>
+<tr><td>20-02-2026</td><td>$1.6271/L</td><td><strong>18.81%</strong></td></tr>
+<tr><td>19-02-2026</td><td>$1.6301/L</td><td><strong>18.90%</strong></td></tr>
+<tr><td>18-02-2026</td><td>$1.6326/L</td><td><strong>18.98%</strong></td></tr>
+<tr><td>17-02-2026</td><td>$1.6393/L</td><td><strong>19.18%</strong></td></tr>
+<tr><td>16-02-2026</td><td>$1.6430/L</td><td><strong>19.29%</strong></td></tr>
+<tr><td>13-02-2026</td><td>$1.6437/L</td><td><strong>19.31%</strong></td></tr>
+<tr><td>12-02-2026</td><td>$1.6433/L</td><td><strong>19.30%</strong></td></tr>
+<tr><td>11-02-2026</td><td>$1.6434/L</td><td><strong>19.30%</strong></td></tr>
+<tr><td>10-02-2026</td><td>$1.6421/L</td><td><strong>19.26%</strong></td></tr>
+<tr><td>09-02-2026</td><td>$1.6399/L</td><td><strong>19.20%</strong></td></tr>
+<tr><td>06-02-2026</td><td>$1.6373/L</td><td><strong>19.12%</strong></td></tr>
+<tr><td>05-02-2026</td><td>$1.6356/L</td><td><strong>19.07%</strong></td></tr>
+<tr><td>04-02-2026</td><td>$1.6343/L</td><td><strong>19.03%</strong></td></tr>
+<tr><td>03-02-2026</td><td>$1.6311/L</td><td><strong>18.93%</strong></td></tr>
+<tr><td>02-02-2026</td><td>$1.6306/L</td><td><strong>18.92%</strong></td></tr>
+<tr><td>30-01-2026</td><td>$1.6211/L</td><td><strong>18.63%</strong></td></tr>
+<tr><td>29-01-2026</td><td>$1.6229/L</td><td><strong>18.69%</strong></td></tr>
+<tr><td>28-01-2026</td><td>$1.6236/L</td><td><strong>18.71%</strong></td></tr>
+<tr><td>27-01-2026</td><td>$1.6194/L</td><td><strong>18.58%</strong></td></tr>
+<tr><td>26-01-2026</td><td>$1.6194/L</td><td><strong>18.58%</strong></td></tr>
+<tr><td>23-01-2026</td><td>$1.6156/L</td><td><strong>18.47%</strong></td></tr>
+<tr><td>22-01-2026</td><td>$1.6126/L</td><td><strong>18.38%</strong></td></tr>
+<tr><td>21-01-2026</td><td>$1.6080/L</td><td><strong>18.24%</strong></td></tr>
+<tr><td>20-01-2026</td><td>$1.5970/L</td><td><strong>17.91%</strong></td></tr>
+<tr><td>19-01-2026</td><td>$1.5934/L</td><td><strong>17.80%</strong></td></tr>
+<tr><td>16-01-2026</td><td>$1.5823/L</td><td><strong>17.47%</strong></td></tr>
+<tr><td>15-01-2026</td><td>$1.5729/L</td><td><strong>17.19%</strong></td></tr>
+<tr><td>14-01-2026</td><td>$1.5707/L</td><td><strong>17.12%</strong></td></tr>
+<tr><td>13-01-2026</td><td>$1.5689/L</td><td><strong>17.07%</strong></td></tr>
+<tr><td>12-01-2026</td><td>$1.5703/L</td><td><strong>17.11%</strong></td></tr>
+<tr><td>09-01-2026</td><td>$1.5746/L</td><td><strong>17.24%</strong></td></tr>
+<tr><td>08-01-2026</td><td>$1.5790/L</td><td><strong>17.37%</strong></td></tr>
+<tr><td>07-01-2026</td><td>$1.5806/L</td><td><strong>17.42%</strong></td></tr>
+<tr><td>06-01-2026</td><td>$1.5819/L</td><td><strong>17.46%</strong></td></tr>
+<tr><td>05-01-2026</td><td>$1.5833/L</td><td><strong>17.50%</strong></td></tr>
+<tr><td>02-01-2026</td><td>$1.5844/L</td><td><strong>17.53%</strong></td></tr>
+<tr><td>01-01-2026</td><td>$1.5851/L</td><td><strong>17.55%</strong></td></tr>
+</table>
+            </div>
+            <div id="dollar-weekly" class="htab-content htab-dollar">
+                <table class="history"><tr><th>Period Start</th><th>Period End</th><th>Applicable To</th><th>Avg TGP ($/L)</th><th>Fuel Levy</th><th>Days</th></tr><tr><td>28-02-2026</td><td>06-03-2026</td><td>07 Mar - 13 Mar 2026</td><td>$1.7304/L</td><td><strong>21.91%</strong></td><td>5</td></tr>
+<tr><td>21-02-2026</td><td>27-02-2026</td><td>28 Feb - 06 Mar 2026</td><td>$1.6509/L</td><td><strong>19.53%</strong></td><td>5</td></tr>
+<tr><td>14-02-2026</td><td>20-02-2026</td><td>21 Feb - 27 Feb 2026</td><td>$1.6344/L</td><td><strong>19.03%</strong></td><td>5</td></tr>
+<tr><td>07-02-2026</td><td>13-02-2026</td><td>14 Feb - 20 Feb 2026</td><td>$1.6425/L</td><td><strong>19.27%</strong></td><td>5</td></tr>
+<tr><td>31-01-2026</td><td>06-02-2026</td><td>07 Feb - 13 Feb 2026</td><td>$1.6338/L</td><td><strong>19.01%</strong></td><td>5</td></tr>
+<tr><td>24-01-2026</td><td>30-01-2026</td><td>31 Jan - 06 Feb 2026</td><td>$1.6213/L</td><td><strong>18.64%</strong></td><td>5</td></tr>
+<tr><td>17-01-2026</td><td>23-01-2026</td><td>24 Jan - 30 Jan 2026</td><td>$1.6053/L</td><td><strong>18.16%</strong></td><td>5</td></tr>
+<tr><td>10-01-2026</td><td>16-01-2026</td><td>17 Jan - 23 Jan 2026</td><td>$1.5730/L</td><td><strong>17.19%</strong></td><td>5</td></tr>
+<tr><td>03-01-2026</td><td>09-01-2026</td><td>10 Jan - 16 Jan 2026</td><td>$1.5799/L</td><td><strong>17.40%</strong></td><td>5</td></tr>
+</table>
+            </div>
+            <div id="dollar-monthly" class="htab-content htab-dollar">
+                <table class="history"><tr><th>Period Start</th><th>Period End</th><th>Applicable To</th><th>Avg TGP ($/L)</th><th>Fuel Levy</th><th>Days</th></tr><tr><td>01-02-2026</td><td>28-02-2026</td><td>March 2026</td><td>$1.6404/L</td><td><strong>19.21%</strong></td><td>20</td></tr>
+<tr><td>01-01-2026</td><td>31-01-2026</td><td>February 2026</td><td>$1.5939/L</td><td><strong>17.82%</strong></td><td>22</td></tr>
+</table>
+            </div>
+        </div></div>
+
+    <footer>
+        Data sourced from Australian Institute of Petroleum (aip.com.au). All prices inclusive of GST.
+    </footer>
+</div>
+
+<script>
+function switchPage(id) {
+    document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+    event.target.classList.add('active');
+    document.getElementById('page-' + id).style.display = 'block';
+    initChartTooltips();
+}
+
+function switchHistoryTab(prefix, tab) {
+    var parent = event.target.closest('.history-section');
+    parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    parent.querySelectorAll('.htab-content').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(prefix + '-' + tab).classList.add('active');
+}
+
+function initChartTooltips() {
+    document.querySelectorAll('.trendChart').forEach(function(svg) {
+        var card = svg.closest('.chart-card');
+        if (!card) return;
+        var tooltip = card.querySelector('.chart-tooltip');
+        var dot = svg.querySelector('.hoverDot');
+        var vline = svg.querySelector('.hoverLine');
+        if (!tooltip || !dot || !vline) return;
+
+        svg.querySelectorAll('.hover-target').forEach(function(rect) {
+            rect.onmouseenter = function() {
+                var x = this.getAttribute('data-x');
+                var y = this.getAttribute('data-y');
+                var levy = this.getAttribute('data-levy');
+                var dt = this.getAttribute('data-date');
+                var tgp = this.getAttribute('data-tgp');
+                dot.setAttribute('cx', x);
+                dot.setAttribute('cy', y);
+                dot.style.display = '';
+                vline.setAttribute('x1', x);
+                vline.setAttribute('x2', x);
+                vline.style.display = '';
+                tooltip.innerHTML = '<strong>' + dt + '</strong><br>Levy: ' + levy + '%<br>TGP: $' + tgp + '/L';
+                tooltip.style.display = 'block';
+                var svgRect = svg.getBoundingClientRect();
+                var cardRect = card.getBoundingClientRect();
+                var vb = svg.viewBox.baseVal;
+                var pxX = (x / vb.width) * svgRect.width;
+                var pxY = (y / vb.height) * svgRect.height;
+                var tipLeft = pxX + (svgRect.left - cardRect.left) + 12;
+                var tipTop = pxY + (svgRect.top - cardRect.top) - 20;
+                if (tipLeft + 160 > cardRect.width) tipLeft = pxX + (svgRect.left - cardRect.left) - 160;
+                tooltip.style.left = tipLeft + 'px';
+                tooltip.style.top = tipTop + 'px';
+            };
+            rect.onmouseleave = function() {
+                dot.style.display = 'none';
+                vline.style.display = 'none';
+                tooltip.style.display = 'none';
+            };
+        });
+    });
+}
+initChartTooltips();
+</script>
+
+</body>
+</html>
