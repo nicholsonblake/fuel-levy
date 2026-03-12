@@ -27,6 +27,7 @@ import json
 import logging
 import shutil
 import sys
+import time
 import webbrowser
 from datetime import datetime, date, timedelta
 from pathlib import Path
@@ -419,21 +420,47 @@ def generate_html_report() -> Path:
         except (ValueError, TypeError):
             return iso_str
 
-    # Fetch current data
-    try:
-        daily_avg, daily_date, daily_terminals = fetch_daily_from_api()
-        daily_levy = calculate_fuel_levy(daily_avg)
-        save_to_history("daily", {"date": daily_date, "avg_tgp_cpl": daily_avg, "levy_pct": daily_levy["levy_pct"]})
-    except Exception as exc:
-        log.error("Daily fetch failed: %s", exc)
-        daily_avg = daily_levy = daily_terminals = None
-        daily_date = "unavailable"
+    # Track whether we fell back to cached data
+    daily_stale = weekly_stale = monthly_stale = False
+
+    # Fetch current data with retry
+    daily_avg = daily_levy = daily_terminals = None
+    daily_date = "unavailable"
+    for attempt in range(3):
+        try:
+            daily_avg, daily_date, daily_terminals = fetch_daily_from_api()
+            daily_levy = calculate_fuel_levy(daily_avg)
+            save_to_history("daily", {"date": daily_date, "avg_tgp_cpl": daily_avg, "levy_pct": daily_levy["levy_pct"]})
+            break
+        except Exception as exc:
+            log.warning("Daily fetch attempt %d failed: %s", attempt + 1, exc)
+            if attempt < 2:
+                time.sleep(2)
+
+    # Fallback to latest history if daily fetch failed
+    if daily_avg is None:
+        log.warning("All daily fetch attempts failed, falling back to history")
+        cached = load_history("daily")
+        if cached:
+            latest = cached[-1]
+            daily_avg = float(latest["avg_tgp_cpl"])
+            daily_date = latest["date"]
+            daily_levy = calculate_fuel_levy(daily_avg)
+            daily_terminals = None
+            daily_stale = True
+            log.info("Using cached daily data from %s", daily_date)
 
     all_rows = None
-    try:
-        all_rows = load_excel_diesel_data()
-    except Exception as exc:
-        log.error("Excel download failed: %s", exc)
+    for attempt in range(3):
+        try:
+            all_rows = load_excel_diesel_data()
+            break
+        except Exception as exc:
+            log.warning("Excel download attempt %d failed: %s", attempt + 1, exc)
+            if attempt < 2:
+                time.sleep(2)
+    if all_rows is None:
+        log.warning("All Excel download attempts failed")
 
     try:
         w_start, w_end, w_applicable = get_prior_week_range()
@@ -443,10 +470,22 @@ def generate_html_report() -> Path:
                                    "applicable_to": w_applicable, "avg_tgp_cpl": weekly_avg,
                                    "levy_pct": weekly_levy["levy_pct"], "days": weekly_days})
     except Exception as exc:
-        log.error("Weekly failed: %s", exc)
+        log.warning("Weekly calculation failed: %s — falling back to history", exc)
         weekly_avg = weekly_levy = weekly_terminals = None
         w_start = w_end = w_applicable = "unavailable"
         weekly_days = 0
+        cached = load_history("weekly")
+        if cached:
+            latest = cached[-1]
+            weekly_avg = float(latest["avg_tgp_cpl"])
+            weekly_levy = calculate_fuel_levy(weekly_avg)
+            weekly_terminals = None
+            weekly_days = int(latest["days"])
+            w_applicable = latest["applicable_to"]
+            w_start = latest["period_start"]
+            w_end = latest["period_end"]
+            weekly_stale = True
+            log.info("Using cached weekly data from %s", w_start)
 
     try:
         m_start, m_end, m_applicable = get_prior_month_range()
@@ -456,10 +495,22 @@ def generate_html_report() -> Path:
                                     "applicable_to": m_applicable, "avg_tgp_cpl": monthly_avg,
                                     "levy_pct": monthly_levy["levy_pct"], "days": monthly_days})
     except Exception as exc:
-        log.error("Monthly failed: %s", exc)
+        log.warning("Monthly calculation failed: %s — falling back to history", exc)
         monthly_avg = monthly_levy = monthly_terminals = None
         m_start = m_end = m_applicable = "unavailable"
         monthly_days = 0
+        cached = load_history("monthly")
+        if cached:
+            latest = cached[-1]
+            monthly_avg = float(latest["avg_tgp_cpl"])
+            monthly_levy = calculate_fuel_levy(monthly_avg)
+            monthly_terminals = None
+            monthly_days = int(latest["days"])
+            m_applicable = latest["applicable_to"]
+            m_start = latest["period_start"]
+            m_end = latest["period_end"]
+            monthly_stale = True
+            log.info("Using cached monthly data from %s", m_start)
 
     # Load history for tables & chart
     daily_history = load_history("daily")
@@ -469,14 +520,16 @@ def generate_html_report() -> Path:
     # Build levy cards
     def levy_card(title: str, subtitle: str, applicable: str, levy: Optional[dict],
                   avg_cpl: Optional[float], terminals: Optional[dict],
-                  days: Optional[int] = None, accent: str = "#C17F4E") -> str:
+                  days: Optional[int] = None, accent: str = "#C17F4E",
+                  stale: bool = False) -> str:
         if levy is None:
             return f'<div class="card" style="border-top:4px solid #C45B5B;"><h2>{title}</h2><p class="subtitle">{subtitle}</p><p class="error">Data unavailable</p></div>'
         days_str = f" ({days} trading days)" if days else ""
+        stale_badge = '<span style="display:inline-block;background:#E8A840;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;margin-left:8px;vertical-align:middle;">CACHED</span>' if stale else ""
         t_rows = "".join(f"<tr><td>{t}</td><td>{terminals[t]:.2f}</td></tr>" for t in sorted(terminals)) if terminals else ""
         return f"""
         <div class="card" style="border-top:4px solid {accent};">
-            <h2>{title}</h2>
+            <h2>{title}{stale_badge}</h2>
             <p class="subtitle">{subtitle}{days_str}</p>
             <p class="applicable">Applicable to: <strong>{applicable}</strong></p>
             <div class="levy-hero"><span class="levy-number">{levy['levy_pct']:.2f}%</span><span class="levy-label">Fuel Levy</span></div>
@@ -493,8 +546,18 @@ def generate_html_report() -> Path:
         </div>"""
 
     daily_sub = fmt_date(daily_date) if daily_date and daily_date != "unavailable" else "unavailable"
-    weekly_sub = f"{w_start.strftime('%d-%m-%Y')} - {w_end.strftime('%d-%m-%Y')}" if isinstance(w_start, date) else "unavailable"
-    monthly_sub = f"{m_start.strftime('%d-%m-%Y')} - {m_end.strftime('%d-%m-%Y')}" if isinstance(m_start, date) else "unavailable"
+    if isinstance(w_start, date):
+        weekly_sub = f"{w_start.strftime('%d-%m-%Y')} - {w_end.strftime('%d-%m-%Y')}"
+    elif isinstance(w_start, str) and w_start != "unavailable":
+        weekly_sub = f"{fmt_date(w_start)} - {fmt_date(w_end)}"
+    else:
+        weekly_sub = "unavailable"
+    if isinstance(m_start, date):
+        monthly_sub = f"{m_start.strftime('%d-%m-%Y')} - {m_end.strftime('%d-%m-%Y')}"
+    elif isinstance(m_start, str) and m_start != "unavailable":
+        monthly_sub = f"{fmt_date(m_start)} - {fmt_date(m_end)}"
+    else:
+        monthly_sub = "unavailable"
     daily_app = fmt_date(daily_date) if daily_date and daily_date != "unavailable" else "N/A"
     weekly_app = w_applicable if isinstance(w_applicable, str) else "N/A"
     monthly_app = m_applicable if isinstance(m_applicable, str) else "N/A"
@@ -534,9 +597,9 @@ def generate_html_report() -> Path:
         m_levy = lev(monthly_avg) if monthly_avg else None
 
         cards = '<div class="grid">'
-        cards += levy_card("Daily", daily_sub, daily_app, d_levy, daily_avg, daily_terminals, accent="#C17F4E")
-        cards += levy_card("Weekly", weekly_sub, weekly_app, w_levy, weekly_avg, weekly_terminals, weekly_days, accent="#3B8A6A")
-        cards += levy_card("Monthly", monthly_sub, monthly_app, m_levy, monthly_avg, monthly_terminals, monthly_days, accent="#C49B3B")
+        cards += levy_card("Daily", daily_sub, daily_app, d_levy, daily_avg, daily_terminals, accent="#C17F4E", stale=daily_stale)
+        cards += levy_card("Weekly", weekly_sub, weekly_app, w_levy, weekly_avg, weekly_terminals, weekly_days, accent="#3B8A6A", stale=weekly_stale)
+        cards += levy_card("Monthly", monthly_sub, monthly_app, m_levy, monthly_avg, monthly_terminals, monthly_days, accent="#C49B3B", stale=monthly_stale)
         cards += "</div>"
 
         formula = f'<div class="formula">Fuel Levy = <code>((Avg Diesel TGP - Base ${base/100:.2f}/L) / Base) x {wt*100:.0f}% weighting</code></div>'
