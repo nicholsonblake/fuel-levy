@@ -800,9 +800,6 @@ def generate_html(data):
         trajectory, cond["wti_usd"], asym,
     )
 
-    # Forecast accuracy
-    accuracy_data = load_prediction_accuracy()
-    accuracy_html = accuracy_card(accuracy_data)
 
     # Short-term outlook: tomorrow (momentum-based), 1-week, 8-week (trajectory)
     # TGP is sticky day-to-day — tomorrow's price is driven by recent momentum,
@@ -1189,9 +1186,6 @@ def generate_html(data):
     <div class="card-desc">Predicted diesel TGP under different crude oil prices and AUD/USD exchange rates. Green = lower, red = higher.</div>
     {sc_html}
   </div>
-
-  <!-- Forecast Accuracy -->
-  {accuracy_html}
 
   <footer>
     Data sources: AIP Terminal Gate Prices &middot; Yahoo Finance (WTI, AUD/USD, Heating Oil futures)<br>
