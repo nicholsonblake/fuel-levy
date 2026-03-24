@@ -5,6 +5,7 @@ Reads from forecast/latest.json and data/diesel_tgp_history.csv.
 Outputs to reports/forecast.html (deployed via GitHub Pages).
 """
 
+import csv
 import json
 import math
 from datetime import date, timedelta
@@ -518,6 +519,147 @@ def asym_bars(asymmetry, w=600, h=200):
     </svg>"""
 
 
+def load_prediction_accuracy(limit=8):
+    """
+    Load prediction log and compute accuracy for days where we have both
+    a prior prediction and the actual outcome.
+    Returns list of dicts: [{date, predicted, actual, error, error_pct}, ...]
+    """
+    log_path = FORECAST_DIR / "prediction_log.csv"
+    if not log_path.exists():
+        return []
+
+    with open(log_path, "r", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    if not rows:
+        return []
+
+    # Group by run_date and take the last prediction per date
+    by_date = {}
+    for row in rows:
+        by_date[row["run_date"]] = row
+
+    # Load actual TGP history to compare predictions against next-day actuals
+    tgp_path = DATA_DIR / "diesel_tgp_history.csv"
+    if not tgp_path.exists():
+        return []
+
+    tgp_df = pd.read_csv(tgp_path, parse_dates=["date"]).set_index("date").sort_index()
+    tgp_dict = {str(d.date()): row["diesel_tgp"] for d, row in tgp_df.iterrows()}
+
+    results = []
+    for run_date, row in sorted(by_date.items()):
+        predicted = float(row["predicted_tgp"])
+        # Compare prediction to the actual TGP on that date
+        actual = tgp_dict.get(run_date)
+        if actual is None:
+            continue
+        error = actual - predicted
+        error_pct = (error / actual) * 100 if actual else 0
+        results.append({
+            "date": run_date,
+            "predicted": predicted,
+            "actual": actual,
+            "error": error,
+            "error_pct": error_pct,
+        })
+
+    return results[-limit:]
+
+
+def accuracy_card(accuracy_data):
+    """Render a forecast accuracy tracking card."""
+    if not accuracy_data:
+        return (
+            '<div class="card">'
+            '<div class="card-title">Forecast Accuracy</div>'
+            '<div class="card-desc">Tracking prediction vs actual TGP over time. '
+            'Accuracy data will appear here once predictions span multiple days.</div>'
+            '</div>'
+        )
+
+    # Summary stats
+    errors = [abs(a["error_pct"]) for a in accuracy_data]
+    avg_error = sum(errors) / len(errors)
+    max_error = max(errors)
+
+    # Build table rows
+    rows = ""
+    for a in reversed(accuracy_data):
+        err_color = "#22c55e" if abs(a["error_pct"]) < 5 else "#f59e0b" if abs(a["error_pct"]) < 10 else "#ef4444"
+        rows += (
+            f'<tr>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9">{a["date"]}</td>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">{a["predicted"]:.0f}</td>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">{a["actual"]:.0f}</td>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;color:{err_color};font-weight:600">'
+            f'{a["error"]:+.0f} ({a["error_pct"]:+.1f}%)</td>'
+            f'</tr>'
+        )
+
+    accuracy_badge_color = "#f0fdf4;color:#16a34a" if avg_error < 5 else "#fffbeb;color:#d97706" if avg_error < 10 else "#fef2f2;color:#dc2626"
+    return (
+        f'<div class="card">'
+        f'<div class="card-title">Forecast Accuracy '
+        f'<span class="badge" style="background:{accuracy_badge_color};margin-left:8px">Avg error {avg_error:.1f}%</span></div>'
+        f'<div class="card-desc">How well the model predicted actual TGP. '
+        f'Predicted = model equilibrium on that date vs what TGP actually was.</div>'
+        f'<div style="overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0">'
+        f'<table style="width:100%;border-collapse:collapse">'
+        f'<thead><tr style="background:#f8fafc">'
+        f'<th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Date</th>'
+        f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Predicted</th>'
+        f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Actual</th>'
+        f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Error</th>'
+        f'</tr></thead>'
+        f'<tbody>{rows}</tbody>'
+        f'</table></div></div>'
+    )
+
+
+def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_usd, asym):
+    """Build a one-line executive summary for the forecast dashboard."""
+    parts = []
+
+    # Current state
+    parts.append(f"Diesel TGP at {actual:.0f} cpl (${actual/100:.2f}/L)")
+
+    # Overshoot/gap
+    if abs(residual) > 10:
+        parts.append(f"{'above' if residual > 0 else 'below'} model equilibrium by {abs(residual):.0f} cpl")
+
+    # Direction
+    if trajectory and len(trajectory) > 1:
+        end_tgp = trajectory[-1]["projected_tgp"]
+        weeks = trajectory[-1]["week"]
+        if residual > 20:
+            parts.append(f"expected to ease toward {end_tgp:.0f} cpl over {weeks} weeks")
+        elif residual < -20:
+            parts.append(f"expected to rise toward {end_tgp:.0f} cpl over {weeks} weeks")
+
+    # WTI context
+    parts.append(f"WTI crude at ${wti_usd:.0f}/bbl")
+
+    summary = ", ".join(parts) + "."
+
+    # Banner color
+    if residual > 20:
+        bg, border = "#fef2f2", "#fecaca"
+    elif residual < -20:
+        bg, border = "#fffbeb", "#fde68a"
+    else:
+        bg, border = "#f0fdf4", "#bbf7d0"
+
+    return (
+        f'<div style="background:{bg};border:1px solid {border};border-radius:14px;'
+        f'padding:18px 24px;margin-bottom:20px;font-size:14px;line-height:1.6;">'
+        f'<div style="font-weight:700;margin-bottom:2px;color:#1e293b">Executive Summary</div>'
+        f'<div style="color:#475569">{summary}</div>'
+        f'</div>'
+    )
+
+
 def generate_html(data):
     cond = data["conditions"]
     decomp = data["decomposition"]
@@ -536,6 +678,7 @@ def generate_html(data):
         history = pd.DataFrame()
 
     # Week-on-week
+    wow = 0.0
     if len(history) > 7:
         wa = history["diesel_tgp"].iloc[-8]
         wow = actual - wa
@@ -594,6 +737,45 @@ def generate_html(data):
 
     wti_aud_cpl = cond.get("wti_aud_cpl", 0)
     coeff = model.get("coefficients", {}).get("WTI_AUD_CPL_lag1", 1.19)
+
+    # WTI week-on-week change
+    wti_hist = data.get("wti_history", [])
+    wti_wow_html = ""
+    if len(wti_hist) >= 8:
+        wti_7d_ago = wti_hist[-8]["wti_usd"]
+        wti_now = cond["wti_usd"]
+        wti_delta = wti_now - wti_7d_ago
+        wti_delta_pct = (wti_delta / wti_7d_ago) * 100 if wti_7d_ago else 0
+        wti_color = "#ef4444" if wti_delta > 0 else "#22c55e"
+        wti_wow_html = (
+            f'<div style="font-size:12px;color:#94a3b8;margin-top:2px">'
+            f'<span style="color:{wti_color};font-weight:600">{wti_delta:+.1f} USD</span> '
+            f'({wti_delta_pct:+.1f}%) vs 7 days ago</div>'
+        )
+
+    # Executive summary
+    exec_summary = exec_summary_forecast(
+        actual, predicted, residual,
+        wow if len(history) > 7 else 0,
+        trajectory, cond["wti_usd"], asym,
+    )
+
+    # Forecast accuracy
+    accuracy_data = load_prediction_accuracy()
+    accuracy_html = accuracy_card(accuracy_data)
+
+    # Next-day TGP estimate from trajectory
+    next_day_html = ""
+    if trajectory and len(trajectory) >= 2:
+        # Week 0 = now, Week 1 = next week; interpolate for tomorrow
+        w0 = trajectory[0]["projected_tgp"]
+        w1 = trajectory[1]["projected_tgp"]
+        next_day_est = w0 + (w1 - w0) / 5  # ~1 trading day step
+        next_day_html = (
+            f'<div style="font-size:12px;color:#94a3b8;margin-top:4px">'
+            f'Next trading day estimate: <strong style="color:#1e293b">{next_day_est:.0f} cpl '
+            f'(${next_day_est/100:.2f}/L)</strong></div>'
+        )
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -764,12 +946,15 @@ def generate_html(data):
 
 <div class="container">
 
+  {exec_summary}
+
   <!-- Key Metrics -->
   <div class="metric-grid">
     <div class="metric">
       <div class="metric-label">Diesel TGP Today</div>
       <div class="metric-value" style="color:#f97316">{actual:.1f}</div>
       <div class="metric-sub">{wow_html}</div>
+      {next_day_html}
     </div>
     <div class="metric">
       <div class="metric-label">Model Equilibrium</div>
@@ -858,6 +1043,7 @@ def generate_html(data):
         <span class="input-label">WTI Crude Oil</span>
         <span class="input-value">${cond["wti_usd"]:.2f} USD/bbl</span>
       </div>
+      {wti_wow_html}
       <div class="input-row">
         <span class="input-label">AUD / USD</span>
         <span class="input-value">{cond["audusd"]:.4f}</span>
@@ -905,6 +1091,9 @@ def generate_html(data):
     <div class="card-desc">Predicted diesel TGP under different crude oil prices and AUD/USD exchange rates. Green = lower, red = higher.</div>
     {sc_html}
   </div>
+
+  <!-- Forecast Accuracy -->
+  {accuracy_html}
 
   <footer>
     Data sources: AIP Terminal Gate Prices &middot; Yahoo Finance (WTI, AUD/USD, Heating Oil futures)<br>
