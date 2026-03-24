@@ -169,7 +169,7 @@ def svg_trend_chart(
 def svg_decomposition_bar(decomposition: dict, width: int = 500, height: int = 60) -> str:
     """Stacked horizontal bar showing TGP component breakdown."""
     components = [
-        ("Crude (AUD)", decomposition.get("crude_oil_aud", 0), "#C17F4E"),
+        ("Crude + shipping", decomposition.get("crude_oil_aud", 0), "#C17F4E"),
         ("Refining", decomposition.get("refining_margin", 0), "#3B82F6"),
         ("Excise", decomposition.get("excise", 0), "#6B7280"),
         ("Base", decomposition.get("intercept", 0), "#D1D5DB"),
@@ -608,8 +608,12 @@ def generate_html(data: dict) -> str:
       {decomp_svg}
       <div style="margin-top:16px">
         <div class="stat-row">
-          <span class="stat-label">Crude oil (AUD)</span>
-          <span class="stat-value">{decomposition.get("crude_oil_aud", 0):.0f} cpl</span>
+          <span class="stat-label">Crude + shipping (AUD)</span>
+          <span class="stat-value">{decomposition.get("crude_oil_aud", 0):.0f} cpl
+            <span style="font-weight:400;color:#999;font-size:11px">
+              ({conditions["wti_aud_cpl"]:.0f} cpl raw x 1.19 markup)
+            </span>
+          </span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Refining margin</span>
