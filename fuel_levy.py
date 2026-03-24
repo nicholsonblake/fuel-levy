@@ -43,8 +43,8 @@ FUEL_WEIGHTING: float = 0.30          # 30%
 
 # Multiple levy views for HTML report
 LEVY_CONFIGS: list[dict] = [
-    {"id": "global", "label": "Global Levy", "base_cpl": 80.0, "weighting": 0.30},
-    {"id": "dollar", "label": "$1.10 Levy", "base_cpl": 110.0, "weighting": 0.30},
+    {"id": "global", "label": "Global", "base_cpl": 80.0, "weighting": 0.30},
+    {"id": "dollar", "label": "$1", "base_cpl": 110.0, "weighting": 0.30},
 ]
 AIP_API_URL: str = (
     "https://www.aip.com.au/aip-api-request"
