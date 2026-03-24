@@ -5,6 +5,9 @@ on:
     # 11:00am AEST = 01:00 UTC (AEST is UTC+10)
     # During AEDT (Oct-Apr) this fires at 12:00pm local
     - cron: '0 1 * * 1-5'
+  push:
+    branches: [master]
+    paths-ignore: ['history/**', 'data/**', 'forecast/**']
   workflow_dispatch: # allow manual trigger
 
 permissions:
