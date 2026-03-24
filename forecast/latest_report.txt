@@ -32,27 +32,27 @@
 
 --- CURRENT CONDITIONS ---
 
-  WTI Crude:       $90.51 USD/bbl
-  AUD/USD:         0.6990
-  WTI in AUD:      81.4 cpl
-  Diesel crack:    68.7 cpl (AUD)
+  WTI Crude:       $89.92 USD/bbl
+  AUD/USD:         0.6984
+  WTI in AUD:      81.0 cpl
+  Diesel crack:    68.2 cpl (AUD)
   Excise:          52.3 cpl
   Actual TGP:      295.6 cpl
 
 --- TGP DECOMPOSITION (what is driving each cent) ---
 
-  Crude oil (AUD):         97.3 cpl
-  Refining margin:         69.0 cpl
+  Crude oil (AUD):         96.7 cpl
+  Refining margin:         68.5 cpl
   Excise (model):          54.2 cpl
   Intercept (base):         7.3 cpl
   ---
-  Model prediction:       227.8 cpl
+  Model prediction:       226.7 cpl
   Actual TGP:             295.6 cpl
-  Residual:                67.8 cpl
+  Residual:                68.9 cpl
 
 --- ASYMMETRIC PASS-THROUGH (rockets and feathers) ---
 
-  R-squared of asymmetric model: 0.5597
+  R-squared of asymmetric model: 0.5595
   Total up pass-through:   2.05 cpl per 1 cpl crude rise
   Total down pass-through: 1.63 cpl per 1 cpl crude fall
   Weeks to 90% pass-through (RISE):  1
@@ -70,10 +70,10 @@
     Week 8:   2.05 cpl  ##########
 
   Cumulative response to 1 cpl crude DECREASE:
-    Week 0:   0.30 cpl  #
+    Week 0:   0.29 cpl  #
     Week 1:   0.70 cpl  ###
     Week 2:   0.96 cpl  ####
-    Week 3:   1.13 cpl  #####
+    Week 3:   1.12 cpl  #####
     Week 4:   1.30 cpl  ######
     Week 5:   1.49 cpl  #######
     Week 6:   1.56 cpl  #######
@@ -82,7 +82,7 @@
 
 --- SCENARIO FORECASTS (Diesel TGP, cpl) ---
 
-  Using crack spread = $35/bbl (current conditions: ~$69 AUD/bbl equiv)
+  Using crack spread = $35/bbl (current conditions: ~$68 AUD/bbl equiv)
 
    WTI USD  AUD 0.56  AUD 0.60  AUD 0.64  AUD 0.68  AUD 0.72
   ----------------------------------------------------------
@@ -97,7 +97,7 @@
 
 --- DIRECTIONAL OUTLOOK ---
 
-  TGP is ABOVE model equilibrium by 68 cpl.
+  TGP is ABOVE model equilibrium by 69 cpl.
   This suggests TGP has overshot OR the model is missing a factor
   (e.g. acute supply disruption premium, further AUD weakness).
   If crude and FX stabilise, expect TGP to DRIFT DOWN over 4-8 weeks.
