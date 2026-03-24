@@ -2,532 +2,550 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diesel TGP Forecast | Booth Transport</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diesel TGP Forecast</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #F5F5F3;
-    color: #1C1F26;
-    line-height: 1.5;
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    background:#f8fafc;
+    color:#1e293b;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
   }
-  .header {
-    background: #1C1F26;
-    color: #F5F5F3;
-    padding: 20px 32px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .top-bar{
+    background:#fff;
+    border-bottom:1px solid #e2e8f0;
+    padding:16px 32px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
   }
-  .header h1 { font-size: 20px; font-weight: 600; }
-  .header .meta { font-size: 12px; color: #999; }
-  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  .logo{font-size:18px;font-weight:700;color:#1e293b;letter-spacing:-0.3px}
+  .logo span{color:#f97316}
+  .top-meta{font-size:12px;color:#94a3b8}
+  .container{max-width:1040px;margin:0 auto;padding:28px 20px 60px}
 
-  .hero-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 24px;
+  .metric-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:16px;
+    margin-bottom:20px;
   }
-  .hero-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    text-align: center;
+  .metric{
+    background:#fff;
+    border-radius:16px;
+    padding:28px 24px;
+    border:1px solid #e2e8f0;
   }
-  .hero-label { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
-  .hero-number { font-size: 42px; font-weight: 700; margin: 4px 0; }
-  .hero-sub { font-size: 13px; color: #666; }
+  .metric-label{
+    font-size:11px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.8px;
+    color:#94a3b8;
+    margin-bottom:4px;
+  }
+  .metric-value{
+    font-size:44px;
+    font-weight:800;
+    letter-spacing:-1.5px;
+    line-height:1.1;
+  }
+  .metric-sub{font-size:12px;color:#94a3b8;margin-top:6px}
 
-  .card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    margin-bottom: 20px;
+  .signal-bar{
+    background:#fef2f2;
+    border:1px solid #fecaca;
+    border-radius:14px;
+    padding:18px 24px;
+    margin-bottom:20px;
+    display:flex;
+    align-items:center;
+    gap:16px;
   }
-  .card h2 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #E0DDD8;
-  }
-  .card h3 {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: #555;
-  }
+  .signal-icon{flex-shrink:0}
+  .signal-label{font-size:16px;font-weight:700;color:#1e293b}
+  .signal-detail{font-size:13px;color:#64748b;margin-top:2px}
 
-  .direction-banner {
-    background: #fff;
-    border-left: 5px solid #EF4444;
-    border-radius: 8px;
-    padding: 16px 24px;
-    margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    display: flex;
-    align-items: center;
-    gap: 16px;
+  .card{
+    background:#fff;
+    border-radius:16px;
+    border:1px solid #e2e8f0;
+    padding:28px;
+    margin-bottom:20px;
   }
-  .direction-arrow {
-    font-size: 36px;
-    color: #EF4444;
-    line-height: 1;
+  .card-title{
+    font-size:15px;
+    font-weight:700;
+    color:#1e293b;
+    margin-bottom:4px;
   }
-  .direction-text { font-size: 16px; font-weight: 600; }
-  .direction-detail { font-size: 13px; color: #666; margin-top: 4px; }
-
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width: 700px) {
-    .hero-row { grid-template-columns: 1fr; }
-    .two-col { grid-template-columns: 1fr; }
-  }
-
-  .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F0EDEA; }
-  .stat-label { color: #666; font-size: 14px; }
-  .stat-value { font-weight: 600; font-size: 14px; }
-
-  .badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #fff;
+  .card-desc{
+    font-size:12px;
+    color:#94a3b8;
+    margin-bottom:20px;
   }
 
-  .chart-tooltip {
-    display: none;
-    position: absolute;
-    background: #1C1F26;
-    color: #fff;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 10;
-    white-space: nowrap;
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+
+  .input-row{
+    display:flex;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid #f1f5f9;
+    font-size:13px;
+  }
+  .input-row:last-child{border-bottom:none}
+  .input-label{color:#64748b}
+  .input-value{font-weight:600;color:#1e293b}
+
+  .asym-grid{display:flex;gap:12px;margin-bottom:20px}
+  .asym-pill{
+    flex:1;
+    text-align:center;
+    padding:20px 16px;
+    border-radius:14px;
+  }
+  .asym-num{font-size:36px;font-weight:800;letter-spacing:-1px;line-height:1}
+  .asym-unit{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px}
+
+  .tip{
+    display:none;
+    position:absolute;
+    background:#1e293b;
+    color:#fff;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:12px;
+    pointer-events:none;
+    z-index:10;
+    white-space:nowrap;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
   }
 
-  .asym-stat { text-align: center; padding: 16px; }
-  .asym-number { font-size: 28px; font-weight: 700; }
-  .asym-label { font-size: 12px; color: #999; text-transform: uppercase; }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:3px 10px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:600;
+  }
 
-  footer { text-align: center; font-size: 11px; color: #999; padding: 24px 0; }
+  footer{
+    text-align:center;
+    font-size:11px;
+    color:#94a3b8;
+    padding:32px 0;
+    border-top:1px solid #f1f5f9;
+    margin-top:20px;
+  }
+
+  @media(max-width:720px){
+    .metric-grid,.two-col{grid-template-columns:1fr}
+    .asym-grid{flex-direction:column}
+  }
 </style>
 </head>
 <body>
 
-<div class="header">
+<div class="top-bar">
   <div>
-    <h1>Booth Transport</h1>
-    <div class="meta">Diesel TGP Forecast Dashboard</div>
+    <div class="logo">Booth<span>.</span> Fuel Intelligence</div>
   </div>
   <div style="text-align:right">
-    <div class="meta">Updated: 2026-03-24</div>
-    <div class="meta">Model R-sq: <span class="badge" style="background:#22C55E">96.8%</span></div>
+    <div class="top-meta">2026-03-24 &middot; Model R&sup2;
+      <span class="badge" style="background:#f0fdf4;color:#16a34a">96.8%</span>
+    </div>
+    <div class="top-meta">Auto-updated weekdays at 11am AEST</div>
   </div>
 </div>
 
 <div class="container">
 
-  <!-- Hero numbers -->
-  <div class="hero-row">
-    <div class="hero-card">
-      <div class="hero-label">Current Diesel TGP</div>
-      <div class="hero-number" style="color:#C17F4E">295.6</div>
-      <div class="hero-sub">cpl (inc GST) | +52.3 cpl (+21.5%) vs last week</div>
+  <!-- Key Metrics -->
+  <div class="metric-grid">
+    <div class="metric">
+      <div class="metric-label">Diesel TGP Today</div>
+      <div class="metric-value" style="color:#f97316">295.6</div>
+      <div class="metric-sub"><span style="color:#ef4444;font-weight:600">+52.3 cpl</span> <span style="color:#94a3b8">(+21.5%) vs 7 days ago</span></div>
     </div>
-    <div class="hero-card">
-      <div class="hero-label">Model Equilibrium</div>
-      <div class="hero-number" style="color:#3B82F6">229</div>
-      <div class="hero-sub">cpl predicted at current inputs</div>
+    <div class="metric">
+      <div class="metric-label">Model Equilibrium</div>
+      <div class="metric-value" style="color:#6366f1">229</div>
+      <div class="metric-sub">Where TGP <em>should</em> be at current inputs</div>
     </div>
-    <div class="hero-card">
-      <div class="hero-label">Gap</div>
-      <div class="hero-number" style="color:#EF4444">+67</div>
-      <div class="hero-sub">cpl above equilibrium</div>
+    <div class="metric">
+      <div class="metric-label">Overshoot / Gap</div>
+      <div class="metric-value" style="color:#ef4444">+67</div>
+      <div class="metric-sub">cpl above equilibrium</div>
     </div>
   </div>
 
-  <!-- Direction banner -->
-  <div class="direction-banner">
-    <div class="direction-arrow">&#9660;</div>
+  <!-- Direction Signal -->
+  <div class="signal-bar">
+    <div class="signal-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4l8 8h-5v8h-6v-8H4l8-8z" fill="#ef4444" transform="rotate(180 12 12)"/></svg></div>
     <div>
-      <div class="direction-text">OVERSHOOTING by 67 cpl (23%) -- expect decline</div>
-      <div class="direction-detail">
-        Rises pass through in ~1 week(s).
-        Falls take ~5 weeks.
-        TGP will drift down as the lag effect unwinds.
-      </div>
+      <div class="signal-label">Expect decline</div>
+      <div class="signal-detail">TGP is 67 cpl above equilibrium. As the lag unwinds, TGP should drift down over 5 weeks.</div>
     </div>
   </div>
 
-  <!-- Trend chart -->
+  <!-- Trend Chart -->
   <div class="card" style="position:relative">
-    <h2>Diesel TGP -- Last 120 Days</h2>
-    <div class="chart-tooltip"></div>
-    <svg viewBox="0 0 700 260" class="trendChart"
-         style="width:100%;max-width:700px;height:auto">
-      <line x1="55" y1="220" x2="680" y2="220" stroke="#E8E6E1" stroke-width="1"/>
-<text x="47" y="220" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">143</text>
-<line x1="55" y1="180" x2="680" y2="180" stroke="#E8E6E1" stroke-width="1"/>
-<text x="47" y="180" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">177</text>
-<line x1="55" y1="140" x2="680" y2="140" stroke="#E8E6E1" stroke-width="1"/>
-<text x="47" y="140" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">210</text>
-<line x1="55" y1="100" x2="680" y2="100" stroke="#E8E6E1" stroke-width="1"/>
-<text x="47" y="100" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">244</text>
-<line x1="55" y1="60" x2="680" y2="60" stroke="#E8E6E1" stroke-width="1"/>
-<text x="47" y="60" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">277</text>
-<line x1="55" y1="20" x2="680" y2="20" stroke="#E8E6E1" stroke-width="1"/>
-<text x="47" y="20" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">310</text>
+    <div class="card-title">Diesel TGP &mdash; Last 120 Days</div>
+    <div class="card-desc">Orange line = actual TGP. Dashed purple = model equilibrium at current inputs.</div>
+    <div class="tip" id="chartTip"></div>
+    <svg viewBox="0 0 800 300" style="width:100%;height:auto;display:block">
+    <defs>
+      <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f97316" stop-opacity="0.15"/>
+        <stop offset="100%" stop-color="#f97316" stop-opacity="0.01"/>
+      </linearGradient>
+    </defs>
+    <line x1="56" y1="256" x2="776" y2="256" stroke="#f0f0f0" stroke-width="1"/>
+<text x="46" y="256" text-anchor="end" dominant-baseline="middle" fill="#b0b0b0" font-size="11" font-family="Inter,system-ui,sans-serif">140</text>
+<line x1="56" y1="210" x2="776" y2="210" stroke="#f0f0f0" stroke-width="1"/>
+<text x="46" y="210" text-anchor="end" dominant-baseline="middle" fill="#b0b0b0" font-size="11" font-family="Inter,system-ui,sans-serif">174</text>
+<line x1="56" y1="163" x2="776" y2="163" stroke="#f0f0f0" stroke-width="1"/>
+<text x="46" y="163" text-anchor="end" dominant-baseline="middle" fill="#b0b0b0" font-size="11" font-family="Inter,system-ui,sans-serif">207</text>
+<line x1="56" y1="117" x2="776" y2="117" stroke="#f0f0f0" stroke-width="1"/>
+<text x="46" y="117" text-anchor="end" dominant-baseline="middle" fill="#b0b0b0" font-size="11" font-family="Inter,system-ui,sans-serif">241</text>
+<line x1="56" y1="70" x2="776" y2="70" stroke="#f0f0f0" stroke-width="1"/>
+<text x="46" y="70" text-anchor="end" dominant-baseline="middle" fill="#b0b0b0" font-size="11" font-family="Inter,system-ui,sans-serif">274</text>
+<line x1="56" y1="24" x2="776" y2="24" stroke="#f0f0f0" stroke-width="1"/>
+<text x="46" y="24" text-anchor="end" dominant-baseline="middle" fill="#b0b0b0" font-size="11" font-family="Inter,system-ui,sans-serif">307</text>
 
-      <line x1="55" y1="118" x2="680" y2="118" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="6,4"/>
-<text x="682" y="118" font-size="10" fill="#3B82F6" dominant-baseline="middle">Model: 229</text>
+    <path d="M 56.0,204.8 C 60.2,204.8 60.2,204.8 64.5,204.8 C 68.7,204.8 68.7,206.4 72.9,206.4 C 77.2,206.4 77.2,208.2 81.4,208.2 C 85.6,208.2 85.6,211.1 89.9,211.1 C 94.1,211.1 94.1,214.1 98.4,214.1 C 102.6,214.1 102.6,215.8 106.8,215.8 C 111.1,215.8 111.1,217.3 115.3,217.3 C 119.5,217.3 119.5,218.0 123.8,218.0 C 128.0,218.0 128.0,218.3 132.2,218.3 C 136.5,218.3 136.5,219.1 140.7,219.1 C 144.9,219.1 144.9,219.5 149.2,219.5 C 153.4,219.5 153.4,220.2 157.6,220.2 C 161.9,220.2 161.9,221.2 166.1,221.2 C 170.4,221.2 170.4,222.3 174.6,222.3 C 178.8,222.3 178.8,223.3 183.1,223.3 C 187.3,223.3 187.3,224.1 191.5,224.1 C 195.8,224.1 195.8,225.6 200.0,225.6 C 204.2,225.6 204.2,227.0 208.5,227.0 C 212.7,227.0 212.7,228.6 216.9,228.6 C 221.2,228.6 221.2,229.5 225.4,229.5 C 229.6,229.5 229.6,230.2 233.9,230.2 C 238.1,230.2 238.1,231.3 242.4,231.3 C 246.6,231.3 246.6,231.8 250.8,231.8 C 255.1,231.8 255.1,231.9 259.3,231.9 C 263.5,231.9 263.5,231.8 267.8,231.8 C 272.0,231.8 272.0,231.8 276.2,231.8 C 280.5,231.8 280.5,232.2 284.7,232.2 C 288.9,232.2 288.9,232.2 293.2,232.2 C 297.4,232.2 297.4,232.2 301.6,232.2 C 305.9,232.2 305.9,232.4 310.1,232.4 C 314.4,232.4 314.4,232.6 318.6,232.6 C 322.8,232.6 322.8,232.7 327.1,232.7 C 331.3,232.7 331.3,233.0 335.5,233.0 C 339.8,233.0 339.8,233.6 344.0,233.6 C 348.2,233.6 348.2,234.1 352.5,234.1 C 356.7,234.1 356.7,234.4 360.9,234.4 C 365.2,234.4 365.2,234.1 369.4,234.1 C 373.6,234.1 373.6,233.8 377.9,233.8 C 382.1,233.8 382.1,232.4 386.4,232.4 C 390.6,232.4 390.6,230.9 394.8,230.9 C 399.1,230.9 399.1,230.5 403.3,230.5 C 407.5,230.5 407.5,229.0 411.8,229.0 C 416.0,229.0 416.0,228.3 420.2,228.3 C 424.5,228.3 424.5,227.9 428.7,227.9 C 432.9,227.9 432.9,227.3 437.2,227.3 C 441.4,227.3 441.4,227.3 445.6,227.3 C 449.9,227.3 449.9,226.8 454.1,226.8 C 458.4,226.8 458.4,226.9 462.6,226.9 C 466.8,226.9 466.8,227.2 471.1,227.2 C 475.3,227.2 475.3,225.8 479.5,225.8 C 483.8,225.8 483.8,225.8 488.0,225.8 C 492.2,225.8 492.2,225.4 496.5,225.4 C 500.7,225.4 500.7,225.1 504.9,225.1 C 509.2,225.1 509.2,225.0 513.4,225.0 C 517.6,225.0 517.6,224.5 521.9,224.5 C 526.1,224.5 526.1,224.3 530.4,224.3 C 534.6,224.3 534.6,224.1 538.8,224.1 C 543.1,224.1 543.1,224.1 547.3,224.1 C 551.5,224.1 551.5,224.1 555.8,224.1 C 560.0,224.1 560.0,224.1 564.2,224.1 C 568.5,224.1 568.5,224.7 572.7,224.7 C 576.9,224.7 576.9,225.6 581.2,225.6 C 585.4,225.6 585.4,225.9 589.6,225.9 C 593.9,225.9 593.9,226.3 598.1,226.3 C 602.4,226.3 602.4,225.8 606.6,225.8 C 610.8,225.8 610.8,224.3 615.1,224.3 C 619.3,224.3 619.3,222.5 623.5,222.5 C 627.8,222.5 627.8,221.6 632.0,221.6 C 636.2,221.6 636.2,221.1 640.5,221.1 C 644.7,221.1 644.7,220.7 648.9,220.7 C 653.2,220.7 653.2,220.2 657.4,220.2 C 661.6,220.2 661.6,215.7 665.9,215.7 C 670.1,215.7 670.1,209.6 674.4,209.6 C 678.6,209.6 678.6,193.0 682.8,193.0 C 687.1,193.0 687.1,174.5 691.3,174.5 C 695.5,174.5 695.5,145.0 699.8,145.0 C 704.0,145.0 704.0,134.6 708.2,134.6 C 712.5,134.6 712.5,113.0 716.7,113.0 C 720.9,113.0 720.9,105.0 725.2,105.0 C 729.4,105.0 729.4,90.0 733.6,90.0 C 737.9,90.0 737.9,81.2 742.1,81.2 C 746.4,81.2 746.4,73.6 750.6,73.6 C 754.8,73.6 754.8,65.0 759.1,65.0 C 763.3,65.0 763.3,58.8 767.5,58.8 C 771.8,58.8 771.8,40.4 776.0,40.4 L 776.0,256.0 L 56.0,256.0 Z" fill="url(#ag)"/>
+    <path d="M 56.0,204.8 C 60.2,204.8 60.2,204.8 64.5,204.8 C 68.7,204.8 68.7,206.4 72.9,206.4 C 77.2,206.4 77.2,208.2 81.4,208.2 C 85.6,208.2 85.6,211.1 89.9,211.1 C 94.1,211.1 94.1,214.1 98.4,214.1 C 102.6,214.1 102.6,215.8 106.8,215.8 C 111.1,215.8 111.1,217.3 115.3,217.3 C 119.5,217.3 119.5,218.0 123.8,218.0 C 128.0,218.0 128.0,218.3 132.2,218.3 C 136.5,218.3 136.5,219.1 140.7,219.1 C 144.9,219.1 144.9,219.5 149.2,219.5 C 153.4,219.5 153.4,220.2 157.6,220.2 C 161.9,220.2 161.9,221.2 166.1,221.2 C 170.4,221.2 170.4,222.3 174.6,222.3 C 178.8,222.3 178.8,223.3 183.1,223.3 C 187.3,223.3 187.3,224.1 191.5,224.1 C 195.8,224.1 195.8,225.6 200.0,225.6 C 204.2,225.6 204.2,227.0 208.5,227.0 C 212.7,227.0 212.7,228.6 216.9,228.6 C 221.2,228.6 221.2,229.5 225.4,229.5 C 229.6,229.5 229.6,230.2 233.9,230.2 C 238.1,230.2 238.1,231.3 242.4,231.3 C 246.6,231.3 246.6,231.8 250.8,231.8 C 255.1,231.8 255.1,231.9 259.3,231.9 C 263.5,231.9 263.5,231.8 267.8,231.8 C 272.0,231.8 272.0,231.8 276.2,231.8 C 280.5,231.8 280.5,232.2 284.7,232.2 C 288.9,232.2 288.9,232.2 293.2,232.2 C 297.4,232.2 297.4,232.2 301.6,232.2 C 305.9,232.2 305.9,232.4 310.1,232.4 C 314.4,232.4 314.4,232.6 318.6,232.6 C 322.8,232.6 322.8,232.7 327.1,232.7 C 331.3,232.7 331.3,233.0 335.5,233.0 C 339.8,233.0 339.8,233.6 344.0,233.6 C 348.2,233.6 348.2,234.1 352.5,234.1 C 356.7,234.1 356.7,234.4 360.9,234.4 C 365.2,234.4 365.2,234.1 369.4,234.1 C 373.6,234.1 373.6,233.8 377.9,233.8 C 382.1,233.8 382.1,232.4 386.4,232.4 C 390.6,232.4 390.6,230.9 394.8,230.9 C 399.1,230.9 399.1,230.5 403.3,230.5 C 407.5,230.5 407.5,229.0 411.8,229.0 C 416.0,229.0 416.0,228.3 420.2,228.3 C 424.5,228.3 424.5,227.9 428.7,227.9 C 432.9,227.9 432.9,227.3 437.2,227.3 C 441.4,227.3 441.4,227.3 445.6,227.3 C 449.9,227.3 449.9,226.8 454.1,226.8 C 458.4,226.8 458.4,226.9 462.6,226.9 C 466.8,226.9 466.8,227.2 471.1,227.2 C 475.3,227.2 475.3,225.8 479.5,225.8 C 483.8,225.8 483.8,225.8 488.0,225.8 C 492.2,225.8 492.2,225.4 496.5,225.4 C 500.7,225.4 500.7,225.1 504.9,225.1 C 509.2,225.1 509.2,225.0 513.4,225.0 C 517.6,225.0 517.6,224.5 521.9,224.5 C 526.1,224.5 526.1,224.3 530.4,224.3 C 534.6,224.3 534.6,224.1 538.8,224.1 C 543.1,224.1 543.1,224.1 547.3,224.1 C 551.5,224.1 551.5,224.1 555.8,224.1 C 560.0,224.1 560.0,224.1 564.2,224.1 C 568.5,224.1 568.5,224.7 572.7,224.7 C 576.9,224.7 576.9,225.6 581.2,225.6 C 585.4,225.6 585.4,225.9 589.6,225.9 C 593.9,225.9 593.9,226.3 598.1,226.3 C 602.4,226.3 602.4,225.8 606.6,225.8 C 610.8,225.8 610.8,224.3 615.1,224.3 C 619.3,224.3 619.3,222.5 623.5,222.5 C 627.8,222.5 627.8,221.6 632.0,221.6 C 636.2,221.6 636.2,221.1 640.5,221.1 C 644.7,221.1 644.7,220.7 648.9,220.7 C 653.2,220.7 653.2,220.2 657.4,220.2 C 661.6,220.2 661.6,215.7 665.9,215.7 C 670.1,215.7 670.1,209.6 674.4,209.6 C 678.6,209.6 678.6,193.0 682.8,193.0 C 687.1,193.0 687.1,174.5 691.3,174.5 C 695.5,174.5 695.5,145.0 699.8,145.0 C 704.0,145.0 704.0,134.6 708.2,134.6 C 712.5,134.6 712.5,113.0 716.7,113.0 C 720.9,113.0 720.9,105.0 725.2,105.0 C 729.4,105.0 729.4,90.0 733.6,90.0 C 737.9,90.0 737.9,81.2 742.1,81.2 C 746.4,81.2 746.4,73.6 750.6,73.6 C 754.8,73.6 754.8,65.0 759.1,65.0 C 763.3,65.0 763.3,58.8 767.5,58.8 C 771.8,58.8 771.8,40.4 776.0,40.4" fill="none" stroke="#f97316" stroke-width="2.5"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    
+    <line x1="56" y1="133" x2="776" y2="133"
+          stroke="#6366f1" stroke-width="1.5" stroke-dasharray="8,6" opacity="0.6"/>
+    <rect x="780" y="123" width="52" height="20" rx="4" fill="#6366f1" opacity="0.1"/>
+    <text x="784" y="136" fill="#6366f1" font-size="11"
+          font-weight="600" font-family="Inter,system-ui,sans-serif">229 eq</text>
+    
+    
+    <circle cx="776.0" cy="40.4" r="6" fill="#fff" stroke="#f97316" stroke-width="3"/>
+    <text x="766.0" y="26.4" text-anchor="end" fill="#f97316"
+          font-size="14" font-weight="700" font-family="Inter,system-ui,sans-serif">295.6</text>
+    
+    <text x="56" y="292" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">24 Nov</text>
+<text x="175" y="292" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">12 Dec</text>
+<text x="293" y="292" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">01 Jan</text>
+<text x="412" y="292" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">21 Jan</text>
+<text x="530" y="292" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">10 Feb</text>
+<text x="649" y="292" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">02 Mar</text>
+<text x="768" y="292" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">20 Mar</text>
+<text x="776" y="292" text-anchor="end" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">24 Mar</text>
 
-      <polygon points="55.0,220.0 55.0,179.6 62.4,179.6 69.7,180.9 77.1,182.5 84.4,185.0 91.8,187.6 99.1,189.0 106.5,190.4 113.8,191.0 121.2,191.2 128.5,191.9 135.9,192.3 143.2,192.9 150.6,193.7 157.9,194.7 165.3,195.5 172.6,196.2 180.0,197.5 187.4,198.7 194.7,200.1 202.1,200.9 209.4,201.5 216.8,202.4 224.1,202.8 231.5,202.9 238.8,202.8 246.2,202.8 253.5,203.2 260.9,203.2 268.2,203.2 275.6,203.4 282.9,203.5 290.3,203.6 297.6,203.9 305.0,204.4 312.4,204.8 319.7,205.1 327.1,204.8 334.4,204.6 341.8,203.4 349.1,202.1 356.5,201.7 363.8,200.4 371.2,199.8 378.5,199.5 385.9,199.0 393.2,199.0 400.6,198.5 407.9,198.6 415.3,198.9 422.6,197.7 430.0,197.7 437.4,197.3 444.7,197.1 452.1,196.9 459.4,196.6 466.8,196.3 474.1,196.2 481.5,196.2 488.8,196.2 496.2,196.2 503.5,196.7 510.9,197.5 518.2,197.8 525.6,198.1 532.9,197.7 540.3,196.3 547.6,194.8 555.0,194.1 562.4,193.6 569.7,193.2 577.1,192.9 584.4,188.9 591.8,183.7 599.1,169.4 606.5,153.4 613.8,128.0 621.2,119.0 628.5,100.3 635.9,93.4 643.2,80.5 650.6,72.9 657.9,66.3 665.3,58.9 672.6,53.5 680.0,37.7 680.0,220.0" fill="url(#areaGrad)" opacity="0.3"/>
-      <polyline points="55.0,179.6 62.4,179.6 69.7,180.9 77.1,182.5 84.4,185.0 91.8,187.6 99.1,189.0 106.5,190.4 113.8,191.0 121.2,191.2 128.5,191.9 135.9,192.3 143.2,192.9 150.6,193.7 157.9,194.7 165.3,195.5 172.6,196.2 180.0,197.5 187.4,198.7 194.7,200.1 202.1,200.9 209.4,201.5 216.8,202.4 224.1,202.8 231.5,202.9 238.8,202.8 246.2,202.8 253.5,203.2 260.9,203.2 268.2,203.2 275.6,203.4 282.9,203.5 290.3,203.6 297.6,203.9 305.0,204.4 312.4,204.8 319.7,205.1 327.1,204.8 334.4,204.6 341.8,203.4 349.1,202.1 356.5,201.7 363.8,200.4 371.2,199.8 378.5,199.5 385.9,199.0 393.2,199.0 400.6,198.5 407.9,198.6 415.3,198.9 422.6,197.7 430.0,197.7 437.4,197.3 444.7,197.1 452.1,196.9 459.4,196.6 466.8,196.3 474.1,196.2 481.5,196.2 488.8,196.2 496.2,196.2 503.5,196.7 510.9,197.5 518.2,197.8 525.6,198.1 532.9,197.7 540.3,196.3 547.6,194.8 555.0,194.1 562.4,193.6 569.7,193.2 577.1,192.9 584.4,188.9 591.8,183.7 599.1,169.4 606.5,153.4 613.8,128.0 621.2,119.0 628.5,100.3 635.9,93.4 643.2,80.5 650.6,72.9 657.9,66.3 665.3,58.9 672.6,53.5 680.0,37.7" fill="none" stroke="#C17F4E" stroke-width="2.5"
-                stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="680.0" cy="37.7" r="5" fill="#C17F4E" stroke="#fff" stroke-width="2"/>
-      <text x="672.0" y="25.7" font-size="13" font-weight="700"
-            fill="#C17F4E" text-anchor="end">295.6</text>
-      <line x1="55" y1="20" x2="55" y2="220"
-            stroke="#CCC" stroke-width="1"/>
-      <line x1="55" y1="220" x2="680"
-            y2="220" stroke="#CCC" stroke-width="1"/>
-      <rect x="51" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="55.0" data-y="179.6" data-date="24 Nov 2025" data-val="177.1"/>
-<rect x="59" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="62.4" data-y="179.6" data-date="25 Nov 2025" data-val="177.1"/>
-<rect x="66" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="69.7" data-y="180.9" data-date="26 Nov 2025" data-val="176.0"/>
-<rect x="73" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="77.1" data-y="182.5" data-date="27 Nov 2025" data-val="174.7"/>
-<rect x="81" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="84.4" data-y="185.0" data-date="28 Nov 2025" data-val="172.6"/>
-<rect x="88" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="91.8" data-y="187.6" data-date="01 Dec 2025" data-val="170.4"/>
-<rect x="95" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="99.1" data-y="189.0" data-date="02 Dec 2025" data-val="169.2"/>
-<rect x="103" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="106.5" data-y="190.4" data-date="03 Dec 2025" data-val="168.1"/>
-<rect x="110" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="113.8" data-y="191.0" data-date="04 Dec 2025" data-val="167.6"/>
-<rect x="118" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="121.2" data-y="191.2" data-date="05 Dec 2025" data-val="167.4"/>
-<rect x="125" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="128.5" data-y="191.9" data-date="08 Dec 2025" data-val="166.8"/>
-<rect x="132" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="135.9" data-y="192.3" data-date="09 Dec 2025" data-val="166.5"/>
-<rect x="140" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="143.2" data-y="192.9" data-date="10 Dec 2025" data-val="166.0"/>
-<rect x="147" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="150.6" data-y="193.7" data-date="11 Dec 2025" data-val="165.3"/>
-<rect x="154" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="157.9" data-y="194.7" data-date="12 Dec 2025" data-val="164.5"/>
-<rect x="162" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="165.3" data-y="195.5" data-date="15 Dec 2025" data-val="163.8"/>
-<rect x="169" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="172.6" data-y="196.2" data-date="16 Dec 2025" data-val="163.2"/>
-<rect x="176" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="180.0" data-y="197.5" data-date="17 Dec 2025" data-val="162.1"/>
-<rect x="184" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="187.4" data-y="198.7" data-date="18 Dec 2025" data-val="161.1"/>
-<rect x="191" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="194.7" data-y="200.1" data-date="19 Dec 2025" data-val="160.0"/>
-<rect x="198" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="202.1" data-y="200.9" data-date="22 Dec 2025" data-val="159.3"/>
-<rect x="206" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="209.4" data-y="201.5" data-date="23 Dec 2025" data-val="158.8"/>
-<rect x="213" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="216.8" data-y="202.4" data-date="24 Dec 2025" data-val="158.0"/>
-<rect x="220" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="224.1" data-y="202.8" data-date="25 Dec 2025" data-val="157.7"/>
-<rect x="228" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="231.5" data-y="202.9" data-date="26 Dec 2025" data-val="157.6"/>
-<rect x="235" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="238.8" data-y="202.8" data-date="29 Dec 2025" data-val="157.7"/>
-<rect x="243" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="246.2" data-y="202.8" data-date="30 Dec 2025" data-val="157.7"/>
-<rect x="250" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="253.5" data-y="203.2" data-date="31 Dec 2025" data-val="157.4"/>
-<rect x="257" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="260.9" data-y="203.2" data-date="01 Jan 2026" data-val="157.4"/>
-<rect x="265" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="268.2" data-y="203.2" data-date="02 Jan 2026" data-val="157.4"/>
-<rect x="272" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="275.6" data-y="203.4" data-date="05 Jan 2026" data-val="157.2"/>
-<rect x="279" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="282.9" data-y="203.5" data-date="06 Jan 2026" data-val="157.1"/>
-<rect x="287" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="290.3" data-y="203.6" data-date="07 Jan 2026" data-val="157.0"/>
-<rect x="294" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="297.6" data-y="203.9" data-date="08 Jan 2026" data-val="156.8"/>
-<rect x="301" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="305.0" data-y="204.4" data-date="09 Jan 2026" data-val="156.4"/>
-<rect x="309" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="312.4" data-y="204.8" data-date="12 Jan 2026" data-val="156.0"/>
-<rect x="316" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="319.7" data-y="205.1" data-date="13 Jan 2026" data-val="155.8"/>
-<rect x="323" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="327.1" data-y="204.8" data-date="14 Jan 2026" data-val="156.0"/>
-<rect x="331" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="334.4" data-y="204.6" data-date="15 Jan 2026" data-val="156.2"/>
-<rect x="338" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="341.8" data-y="203.4" data-date="16 Jan 2026" data-val="157.2"/>
-<rect x="345" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="349.1" data-y="202.1" data-date="19 Jan 2026" data-val="158.3"/>
-<rect x="353" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="356.5" data-y="201.7" data-date="20 Jan 2026" data-val="158.6"/>
-<rect x="360" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="363.8" data-y="200.4" data-date="21 Jan 2026" data-val="159.7"/>
-<rect x="368" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="371.2" data-y="199.8" data-date="22 Jan 2026" data-val="160.2"/>
-<rect x="375" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="378.5" data-y="199.5" data-date="23 Jan 2026" data-val="160.5"/>
-<rect x="382" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="385.9" data-y="199.0" data-date="26 Jan 2026" data-val="160.9"/>
-<rect x="390" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="393.2" data-y="199.0" data-date="27 Jan 2026" data-val="160.9"/>
-<rect x="397" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="400.6" data-y="198.5" data-date="28 Jan 2026" data-val="161.3"/>
-<rect x="404" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="407.9" data-y="198.6" data-date="29 Jan 2026" data-val="161.2"/>
-<rect x="412" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="415.3" data-y="198.9" data-date="30 Jan 2026" data-val="161.0"/>
-<rect x="419" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="422.6" data-y="197.7" data-date="02 Feb 2026" data-val="162.0"/>
-<rect x="426" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="430.0" data-y="197.7" data-date="03 Feb 2026" data-val="162.0"/>
-<rect x="434" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="437.4" data-y="197.3" data-date="04 Feb 2026" data-val="162.3"/>
-<rect x="441" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="444.7" data-y="197.1" data-date="05 Feb 2026" data-val="162.5"/>
-<rect x="448" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="452.1" data-y="196.9" data-date="06 Feb 2026" data-val="162.6"/>
-<rect x="456" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="459.4" data-y="196.6" data-date="09 Feb 2026" data-val="162.9"/>
-<rect x="463" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="466.8" data-y="196.3" data-date="10 Feb 2026" data-val="163.1"/>
-<rect x="470" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="474.1" data-y="196.2" data-date="11 Feb 2026" data-val="163.2"/>
-<rect x="478" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="481.5" data-y="196.2" data-date="12 Feb 2026" data-val="163.2"/>
-<rect x="485" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="488.8" data-y="196.2" data-date="13 Feb 2026" data-val="163.2"/>
-<rect x="493" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="496.2" data-y="196.2" data-date="16 Feb 2026" data-val="163.2"/>
-<rect x="500" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="503.5" data-y="196.7" data-date="17 Feb 2026" data-val="162.8"/>
-<rect x="507" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="510.9" data-y="197.5" data-date="18 Feb 2026" data-val="162.1"/>
-<rect x="515" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="518.2" data-y="197.8" data-date="19 Feb 2026" data-val="161.9"/>
-<rect x="522" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="525.6" data-y="198.1" data-date="20 Feb 2026" data-val="161.6"/>
-<rect x="529" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="532.9" data-y="197.7" data-date="23 Feb 2026" data-val="162.0"/>
-<rect x="537" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="540.3" data-y="196.3" data-date="24 Feb 2026" data-val="163.1"/>
-<rect x="544" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="547.6" data-y="194.8" data-date="25 Feb 2026" data-val="164.4"/>
-<rect x="551" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="555.0" data-y="194.1" data-date="26 Feb 2026" data-val="165.0"/>
-<rect x="559" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="562.4" data-y="193.6" data-date="27 Feb 2026" data-val="165.4"/>
-<rect x="566" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="569.7" data-y="193.2" data-date="02 Mar 2026" data-val="165.7"/>
-<rect x="573" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="577.1" data-y="192.9" data-date="03 Mar 2026" data-val="166.0"/>
-<rect x="581" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="584.4" data-y="188.9" data-date="04 Mar 2026" data-val="169.3"/>
-<rect x="588" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="591.8" data-y="183.7" data-date="05 Mar 2026" data-val="173.7"/>
-<rect x="595" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="599.1" data-y="169.4" data-date="06 Mar 2026" data-val="185.6"/>
-<rect x="603" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="606.5" data-y="153.4" data-date="09 Mar 2026" data-val="199.0"/>
-<rect x="610" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="613.8" data-y="128.0" data-date="10 Mar 2026" data-val="220.2"/>
-<rect x="618" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="621.2" data-y="119.0" data-date="11 Mar 2026" data-val="227.7"/>
-<rect x="625" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="628.5" data-y="100.3" data-date="12 Mar 2026" data-val="243.3"/>
-<rect x="632" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="635.9" data-y="93.4" data-date="13 Mar 2026" data-val="249.1"/>
-<rect x="640" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="643.2" data-y="80.5" data-date="16 Mar 2026" data-val="259.9"/>
-<rect x="647" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="650.6" data-y="72.9" data-date="17 Mar 2026" data-val="266.2"/>
-<rect x="654" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="657.9" data-y="66.3" data-date="18 Mar 2026" data-val="271.7"/>
-<rect x="662" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="665.3" data-y="58.9" data-date="19 Mar 2026" data-val="277.9"/>
-<rect x="669" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="672.6" data-y="53.5" data-date="20 Mar 2026" data-val="282.4"/>
-<rect x="676" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="680.0" data-y="37.7" data-date="24 Mar 2026" data-val="295.6"/>
+    <rect x="52" y="24" width="8" height="232" fill="transparent" class="ht" data-x="56.0" data-y="204.8" data-d="24 Nov 2025" data-v="177.1"/>
+<rect x="60" y="24" width="8" height="232" fill="transparent" class="ht" data-x="64.5" data-y="204.8" data-d="25 Nov 2025" data-v="177.1"/>
+<rect x="69" y="24" width="8" height="232" fill="transparent" class="ht" data-x="72.9" data-y="206.4" data-d="26 Nov 2025" data-v="176.0"/>
+<rect x="77" y="24" width="8" height="232" fill="transparent" class="ht" data-x="81.4" data-y="208.2" data-d="27 Nov 2025" data-v="174.7"/>
+<rect x="86" y="24" width="8" height="232" fill="transparent" class="ht" data-x="89.9" data-y="211.1" data-d="28 Nov 2025" data-v="172.6"/>
+<rect x="94" y="24" width="8" height="232" fill="transparent" class="ht" data-x="98.4" data-y="214.1" data-d="01 Dec 2025" data-v="170.4"/>
+<rect x="103" y="24" width="8" height="232" fill="transparent" class="ht" data-x="106.8" data-y="215.8" data-d="02 Dec 2025" data-v="169.2"/>
+<rect x="111" y="24" width="8" height="232" fill="transparent" class="ht" data-x="115.3" data-y="217.3" data-d="03 Dec 2025" data-v="168.1"/>
+<rect x="120" y="24" width="8" height="232" fill="transparent" class="ht" data-x="123.8" data-y="218.0" data-d="04 Dec 2025" data-v="167.6"/>
+<rect x="128" y="24" width="8" height="232" fill="transparent" class="ht" data-x="132.2" data-y="218.3" data-d="05 Dec 2025" data-v="167.4"/>
+<rect x="137" y="24" width="8" height="232" fill="transparent" class="ht" data-x="140.7" data-y="219.1" data-d="08 Dec 2025" data-v="166.8"/>
+<rect x="145" y="24" width="8" height="232" fill="transparent" class="ht" data-x="149.2" data-y="219.5" data-d="09 Dec 2025" data-v="166.5"/>
+<rect x="153" y="24" width="8" height="232" fill="transparent" class="ht" data-x="157.6" data-y="220.2" data-d="10 Dec 2025" data-v="166.0"/>
+<rect x="162" y="24" width="8" height="232" fill="transparent" class="ht" data-x="166.1" data-y="221.2" data-d="11 Dec 2025" data-v="165.3"/>
+<rect x="170" y="24" width="8" height="232" fill="transparent" class="ht" data-x="174.6" data-y="222.3" data-d="12 Dec 2025" data-v="164.5"/>
+<rect x="179" y="24" width="8" height="232" fill="transparent" class="ht" data-x="183.1" data-y="223.3" data-d="15 Dec 2025" data-v="163.8"/>
+<rect x="187" y="24" width="8" height="232" fill="transparent" class="ht" data-x="191.5" data-y="224.1" data-d="16 Dec 2025" data-v="163.2"/>
+<rect x="196" y="24" width="8" height="232" fill="transparent" class="ht" data-x="200.0" data-y="225.6" data-d="17 Dec 2025" data-v="162.1"/>
+<rect x="204" y="24" width="8" height="232" fill="transparent" class="ht" data-x="208.5" data-y="227.0" data-d="18 Dec 2025" data-v="161.1"/>
+<rect x="213" y="24" width="8" height="232" fill="transparent" class="ht" data-x="216.9" data-y="228.6" data-d="19 Dec 2025" data-v="160.0"/>
+<rect x="221" y="24" width="8" height="232" fill="transparent" class="ht" data-x="225.4" data-y="229.5" data-d="22 Dec 2025" data-v="159.3"/>
+<rect x="230" y="24" width="8" height="232" fill="transparent" class="ht" data-x="233.9" data-y="230.2" data-d="23 Dec 2025" data-v="158.8"/>
+<rect x="238" y="24" width="8" height="232" fill="transparent" class="ht" data-x="242.4" data-y="231.3" data-d="24 Dec 2025" data-v="158.0"/>
+<rect x="247" y="24" width="8" height="232" fill="transparent" class="ht" data-x="250.8" data-y="231.8" data-d="25 Dec 2025" data-v="157.7"/>
+<rect x="255" y="24" width="8" height="232" fill="transparent" class="ht" data-x="259.3" data-y="231.9" data-d="26 Dec 2025" data-v="157.6"/>
+<rect x="264" y="24" width="8" height="232" fill="transparent" class="ht" data-x="267.8" data-y="231.8" data-d="29 Dec 2025" data-v="157.7"/>
+<rect x="272" y="24" width="8" height="232" fill="transparent" class="ht" data-x="276.2" data-y="231.8" data-d="30 Dec 2025" data-v="157.7"/>
+<rect x="281" y="24" width="8" height="232" fill="transparent" class="ht" data-x="284.7" data-y="232.2" data-d="31 Dec 2025" data-v="157.4"/>
+<rect x="289" y="24" width="8" height="232" fill="transparent" class="ht" data-x="293.2" data-y="232.2" data-d="01 Jan 2026" data-v="157.4"/>
+<rect x="297" y="24" width="8" height="232" fill="transparent" class="ht" data-x="301.6" data-y="232.2" data-d="02 Jan 2026" data-v="157.4"/>
+<rect x="306" y="24" width="8" height="232" fill="transparent" class="ht" data-x="310.1" data-y="232.4" data-d="05 Jan 2026" data-v="157.2"/>
+<rect x="314" y="24" width="8" height="232" fill="transparent" class="ht" data-x="318.6" data-y="232.6" data-d="06 Jan 2026" data-v="157.1"/>
+<rect x="323" y="24" width="8" height="232" fill="transparent" class="ht" data-x="327.1" data-y="232.7" data-d="07 Jan 2026" data-v="157.0"/>
+<rect x="331" y="24" width="8" height="232" fill="transparent" class="ht" data-x="335.5" data-y="233.0" data-d="08 Jan 2026" data-v="156.8"/>
+<rect x="340" y="24" width="8" height="232" fill="transparent" class="ht" data-x="344.0" data-y="233.6" data-d="09 Jan 2026" data-v="156.4"/>
+<rect x="348" y="24" width="8" height="232" fill="transparent" class="ht" data-x="352.5" data-y="234.1" data-d="12 Jan 2026" data-v="156.0"/>
+<rect x="357" y="24" width="8" height="232" fill="transparent" class="ht" data-x="360.9" data-y="234.4" data-d="13 Jan 2026" data-v="155.8"/>
+<rect x="365" y="24" width="8" height="232" fill="transparent" class="ht" data-x="369.4" data-y="234.1" data-d="14 Jan 2026" data-v="156.0"/>
+<rect x="374" y="24" width="8" height="232" fill="transparent" class="ht" data-x="377.9" data-y="233.8" data-d="15 Jan 2026" data-v="156.2"/>
+<rect x="382" y="24" width="8" height="232" fill="transparent" class="ht" data-x="386.4" data-y="232.4" data-d="16 Jan 2026" data-v="157.2"/>
+<rect x="391" y="24" width="8" height="232" fill="transparent" class="ht" data-x="394.8" data-y="230.9" data-d="19 Jan 2026" data-v="158.3"/>
+<rect x="399" y="24" width="8" height="232" fill="transparent" class="ht" data-x="403.3" data-y="230.5" data-d="20 Jan 2026" data-v="158.6"/>
+<rect x="408" y="24" width="8" height="232" fill="transparent" class="ht" data-x="411.8" data-y="229.0" data-d="21 Jan 2026" data-v="159.7"/>
+<rect x="416" y="24" width="8" height="232" fill="transparent" class="ht" data-x="420.2" data-y="228.3" data-d="22 Jan 2026" data-v="160.2"/>
+<rect x="425" y="24" width="8" height="232" fill="transparent" class="ht" data-x="428.7" data-y="227.9" data-d="23 Jan 2026" data-v="160.5"/>
+<rect x="433" y="24" width="8" height="232" fill="transparent" class="ht" data-x="437.2" data-y="227.3" data-d="26 Jan 2026" data-v="160.9"/>
+<rect x="441" y="24" width="8" height="232" fill="transparent" class="ht" data-x="445.6" data-y="227.3" data-d="27 Jan 2026" data-v="160.9"/>
+<rect x="450" y="24" width="8" height="232" fill="transparent" class="ht" data-x="454.1" data-y="226.8" data-d="28 Jan 2026" data-v="161.3"/>
+<rect x="458" y="24" width="8" height="232" fill="transparent" class="ht" data-x="462.6" data-y="226.9" data-d="29 Jan 2026" data-v="161.2"/>
+<rect x="467" y="24" width="8" height="232" fill="transparent" class="ht" data-x="471.1" data-y="227.2" data-d="30 Jan 2026" data-v="161.0"/>
+<rect x="475" y="24" width="8" height="232" fill="transparent" class="ht" data-x="479.5" data-y="225.8" data-d="02 Feb 2026" data-v="162.0"/>
+<rect x="484" y="24" width="8" height="232" fill="transparent" class="ht" data-x="488.0" data-y="225.8" data-d="03 Feb 2026" data-v="162.0"/>
+<rect x="492" y="24" width="8" height="232" fill="transparent" class="ht" data-x="496.5" data-y="225.4" data-d="04 Feb 2026" data-v="162.3"/>
+<rect x="501" y="24" width="8" height="232" fill="transparent" class="ht" data-x="504.9" data-y="225.1" data-d="05 Feb 2026" data-v="162.5"/>
+<rect x="509" y="24" width="8" height="232" fill="transparent" class="ht" data-x="513.4" data-y="225.0" data-d="06 Feb 2026" data-v="162.6"/>
+<rect x="518" y="24" width="8" height="232" fill="transparent" class="ht" data-x="521.9" data-y="224.5" data-d="09 Feb 2026" data-v="162.9"/>
+<rect x="526" y="24" width="8" height="232" fill="transparent" class="ht" data-x="530.4" data-y="224.3" data-d="10 Feb 2026" data-v="163.1"/>
+<rect x="535" y="24" width="8" height="232" fill="transparent" class="ht" data-x="538.8" data-y="224.1" data-d="11 Feb 2026" data-v="163.2"/>
+<rect x="543" y="24" width="8" height="232" fill="transparent" class="ht" data-x="547.3" data-y="224.1" data-d="12 Feb 2026" data-v="163.2"/>
+<rect x="552" y="24" width="8" height="232" fill="transparent" class="ht" data-x="555.8" data-y="224.1" data-d="13 Feb 2026" data-v="163.2"/>
+<rect x="560" y="24" width="8" height="232" fill="transparent" class="ht" data-x="564.2" data-y="224.1" data-d="16 Feb 2026" data-v="163.2"/>
+<rect x="569" y="24" width="8" height="232" fill="transparent" class="ht" data-x="572.7" data-y="224.7" data-d="17 Feb 2026" data-v="162.8"/>
+<rect x="577" y="24" width="8" height="232" fill="transparent" class="ht" data-x="581.2" data-y="225.6" data-d="18 Feb 2026" data-v="162.1"/>
+<rect x="585" y="24" width="8" height="232" fill="transparent" class="ht" data-x="589.6" data-y="225.9" data-d="19 Feb 2026" data-v="161.9"/>
+<rect x="594" y="24" width="8" height="232" fill="transparent" class="ht" data-x="598.1" data-y="226.3" data-d="20 Feb 2026" data-v="161.6"/>
+<rect x="602" y="24" width="8" height="232" fill="transparent" class="ht" data-x="606.6" data-y="225.8" data-d="23 Feb 2026" data-v="162.0"/>
+<rect x="611" y="24" width="8" height="232" fill="transparent" class="ht" data-x="615.1" data-y="224.3" data-d="24 Feb 2026" data-v="163.1"/>
+<rect x="619" y="24" width="8" height="232" fill="transparent" class="ht" data-x="623.5" data-y="222.5" data-d="25 Feb 2026" data-v="164.4"/>
+<rect x="628" y="24" width="8" height="232" fill="transparent" class="ht" data-x="632.0" data-y="221.6" data-d="26 Feb 2026" data-v="165.0"/>
+<rect x="636" y="24" width="8" height="232" fill="transparent" class="ht" data-x="640.5" data-y="221.1" data-d="27 Feb 2026" data-v="165.4"/>
+<rect x="645" y="24" width="8" height="232" fill="transparent" class="ht" data-x="648.9" data-y="220.7" data-d="02 Mar 2026" data-v="165.7"/>
+<rect x="653" y="24" width="8" height="232" fill="transparent" class="ht" data-x="657.4" data-y="220.2" data-d="03 Mar 2026" data-v="166.0"/>
+<rect x="662" y="24" width="8" height="232" fill="transparent" class="ht" data-x="665.9" data-y="215.7" data-d="04 Mar 2026" data-v="169.3"/>
+<rect x="670" y="24" width="8" height="232" fill="transparent" class="ht" data-x="674.4" data-y="209.6" data-d="05 Mar 2026" data-v="173.7"/>
+<rect x="679" y="24" width="8" height="232" fill="transparent" class="ht" data-x="682.8" data-y="193.0" data-d="06 Mar 2026" data-v="185.6"/>
+<rect x="687" y="24" width="8" height="232" fill="transparent" class="ht" data-x="691.3" data-y="174.5" data-d="09 Mar 2026" data-v="199.0"/>
+<rect x="696" y="24" width="8" height="232" fill="transparent" class="ht" data-x="699.8" data-y="145.0" data-d="10 Mar 2026" data-v="220.2"/>
+<rect x="704" y="24" width="8" height="232" fill="transparent" class="ht" data-x="708.2" data-y="134.6" data-d="11 Mar 2026" data-v="227.7"/>
+<rect x="713" y="24" width="8" height="232" fill="transparent" class="ht" data-x="716.7" data-y="113.0" data-d="12 Mar 2026" data-v="243.3"/>
+<rect x="721" y="24" width="8" height="232" fill="transparent" class="ht" data-x="725.2" data-y="105.0" data-d="13 Mar 2026" data-v="249.1"/>
+<rect x="729" y="24" width="8" height="232" fill="transparent" class="ht" data-x="733.6" data-y="90.0" data-d="16 Mar 2026" data-v="259.9"/>
+<rect x="738" y="24" width="8" height="232" fill="transparent" class="ht" data-x="742.1" data-y="81.2" data-d="17 Mar 2026" data-v="266.2"/>
+<rect x="746" y="24" width="8" height="232" fill="transparent" class="ht" data-x="750.6" data-y="73.6" data-d="18 Mar 2026" data-v="271.7"/>
+<rect x="755" y="24" width="8" height="232" fill="transparent" class="ht" data-x="759.1" data-y="65.0" data-d="19 Mar 2026" data-v="277.9"/>
+<rect x="763" y="24" width="8" height="232" fill="transparent" class="ht" data-x="767.5" data-y="58.8" data-d="20 Mar 2026" data-v="282.4"/>
+<rect x="772" y="24" width="8" height="232" fill="transparent" class="ht" data-x="776.0" data-y="40.4" data-d="24 Mar 2026" data-v="295.6"/>
 
-      <circle class="hoverDot" cx="0" cy="0" r="4" fill="#1C1F26" stroke="#fff"
-              stroke-width="2" style="display:none"/>
-      <line class="hoverLine" x1="0" y1="20" x2="0" y2="220"
-            stroke="#1C1F26" stroke-width="1" stroke-dasharray="3,3" style="display:none"/>
-      <defs>
-        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#C17F4E" stop-opacity="0.4"/>
-          <stop offset="100%" stop-color="#C17F4E" stop-opacity="0.02"/>
-        </linearGradient>
-      </defs>
+    <circle class="hd" cx="0" cy="0" r="4" fill="#1e293b" stroke="#fff" stroke-width="2" style="display:none"/>
+    <line class="hl" x1="0" y1="24" x2="0" y2="256" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3" style="display:none"/>
     </svg>
-    <p style="font-size:11px;color:#999;margin-top:8px">
-      Solid line = actual TGP. Dashed blue = model equilibrium at today's inputs.
-    </p>
   </div>
 
-  <!-- Decomposition + Current inputs -->
+  <!-- Decomposition + Inputs -->
   <div class="two-col">
     <div class="card">
-      <h2>What is Driving the Price</h2>
-      <svg viewBox="0 0 500 70" style="width:100%;max-width:500px;height:auto">
-      <rect x="0.0" y="10" width="164.4" height="30" fill="#C17F4E" rx="2"/>
-<text x="82.2" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">97</text>
-<rect x="164.4" y="10" width="118.3" height="30" fill="#3B82F6" rx="2"/>
-<text x="223.5" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">70</text>
-<rect x="282.7" y="10" width="91.7" height="30" fill="#6B7280" rx="2"/>
-<text x="328.5" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">54</text>
-<rect x="374.4" y="10" width="12.3" height="30" fill="#D1D5DB" rx="2"/>
-<rect x="386.7" y="10" width="113.3" height="30" fill="#EF4444" rx="2"/>
-<text x="443.4" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">67</text>
-
-      <rect x="0.0" y="56" width="10" height="10" fill="#C17F4E" rx="2"/>
-<text x="14.0" y="65" font-size="10" fill="#666">Crude + shipping</text>
-<rect x="164.4" y="56" width="10" height="10" fill="#3B82F6" rx="2"/>
-<text x="178.4" y="65" font-size="10" fill="#666">Refining</text>
-<rect x="282.7" y="56" width="10" height="10" fill="#6B7280" rx="2"/>
-<text x="296.7" y="65" font-size="10" fill="#666">Excise</text>
-<rect x="374.4" y="56" width="10" height="10" fill="#D1D5DB" rx="2"/>
-<text x="388.4" y="65" font-size="10" fill="#666">Base</text>
-<rect x="386.7" y="56" width="10" height="10" fill="#EF4444" rx="2"/>
-<text x="400.7" y="65" font-size="10" fill="#666">Overshoot</text>
-
-    </svg>
-      <div style="margin-top:16px">
-        <div class="stat-row">
-          <span class="stat-label">Crude + shipping (AUD)</span>
-          <span class="stat-value">97 cpl
-            <span style="font-weight:400;color:#999;font-size:11px">
-              (81 cpl raw x 1.19 markup)
-            </span>
-          </span>
+      <div class="card-title">What is Driving the Price</div>
+      <div class="card-desc">Breakdown of today's 296 cpl diesel TGP into model components</div>
+      <div style="margin-top:8px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:120px;font-size:13px;color:#64748b;flex-shrink:0">Crude + shipping</div>
+          <div style="flex:1;background:#f1f5f9;border-radius:6px;height:28px;overflow:hidden;position:relative">
+            <div style="width:32.9%;height:100%;background:#f97316;border-radius:6px;
+                        display:flex;align-items:center;padding-left:8px;min-width:40px;
+                        transition:width 0.6s ease">
+              <span style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">97</span>
+            </div>
+          </div>
+          <div style="width:48px;text-align:right;font-size:12px;color:#94a3b8;flex-shrink:0">33%</div>
         </div>
-        <div class="stat-row">
-          <span class="stat-label">Refining margin</span>
-          <span class="stat-value">70 cpl</span>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:120px;font-size:13px;color:#64748b;flex-shrink:0">Refining margin</div>
+          <div style="flex:1;background:#f1f5f9;border-radius:6px;height:28px;overflow:hidden;position:relative">
+            <div style="width:23.7%;height:100%;background:#6366f1;border-radius:6px;
+                        display:flex;align-items:center;padding-left:8px;min-width:40px;
+                        transition:width 0.6s ease">
+              <span style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">70</span>
+            </div>
+          </div>
+          <div style="width:48px;text-align:right;font-size:12px;color:#94a3b8;flex-shrink:0">24%</div>
         </div>
-        <div class="stat-row">
-          <span class="stat-label">Excise</span>
-          <span class="stat-value">54 cpl</span>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:120px;font-size:13px;color:#64748b;flex-shrink:0">Excise</div>
+          <div style="flex:1;background:#f1f5f9;border-radius:6px;height:28px;overflow:hidden;position:relative">
+            <div style="width:18.3%;height:100%;background:#64748b;border-radius:6px;
+                        display:flex;align-items:center;padding-left:8px;min-width:40px;
+                        transition:width 0.6s ease">
+              <span style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">54</span>
+            </div>
+          </div>
+          <div style="width:48px;text-align:right;font-size:12px;color:#94a3b8;flex-shrink:0">18%</div>
         </div>
-        <div class="stat-row">
-          <span class="stat-label">Base costs</span>
-          <span class="stat-value">7 cpl</span>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:120px;font-size:13px;color:#64748b;flex-shrink:0">Base</div>
+          <div style="flex:1;background:#f1f5f9;border-radius:6px;height:28px;overflow:hidden;position:relative">
+            <div style="width:2.5%;height:100%;background:#cbd5e1;border-radius:6px;
+                        display:flex;align-items:center;padding-left:8px;min-width:40px;
+                        transition:width 0.6s ease">
+              <span style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">7</span>
+            </div>
+          </div>
+          <div style="width:48px;text-align:right;font-size:12px;color:#94a3b8;flex-shrink:0">2%</div>
         </div>
-        <div class="stat-row" style="border-bottom:2px solid #1C1F26">
-          <span class="stat-label" style="font-weight:600">Overshoot / lag</span>
-          <span class="stat-value" style="color:#EF4444">+67 cpl</span>
-        </div>
-      </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:120px;font-size:13px;color:#64748b;flex-shrink:0">Lag overshoot</div>
+          <div style="flex:1;background:#f1f5f9;border-radius:6px;height:28px;overflow:hidden;position:relative">
+            <div style="width:22.7%;height:100%;background:#ef4444;border-radius:6px;
+                        display:flex;align-items:center;padding-left:8px;min-width:40px;
+                        transition:width 0.6s ease">
+              <span style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap">67</span>
+            </div>
+          </div>
+          <div style="width:48px;text-align:right;font-size:12px;color:#94a3b8;flex-shrink:0">23%</div>
+        </div></div>
     </div>
 
     <div class="card">
-      <h2>Market Inputs</h2>
-      <div class="stat-row">
-        <span class="stat-label">WTI Crude</span>
-        <span class="stat-value">$90.44 USD/bbl</span>
+      <div class="card-title">Market Inputs</div>
+      <div class="card-desc">Latest values feeding the forecast model</div>
+      <div class="input-row">
+        <span class="input-label">WTI Crude Oil</span>
+        <span class="input-value">$90.44 USD/bbl</span>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">AUD/USD</span>
-        <span class="stat-value">0.6989</span>
+      <div class="input-row">
+        <span class="input-label">AUD / USD</span>
+        <span class="input-value">0.6989</span>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">WTI in AUD</span>
-        <span class="stat-value">81.4 cpl</span>
+      <div class="input-row">
+        <span class="input-label">WTI in AUD</span>
+        <span class="input-value">81.4 cpl</span>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">Diesel crack spread</span>
-        <span class="stat-value">69.6 cpl (AUD)</span>
+      <div class="input-row">
+        <span class="input-label">Diesel crack spread</span>
+        <span class="input-value">69.6 cpl (AUD)</span>
       </div>
-      <div class="stat-row">
-        <span class="stat-label">Fuel excise</span>
-        <span class="stat-value">52.3 cpl</span>
+      <div class="input-row">
+        <span class="input-label">Fuel excise</span>
+        <span class="input-value">52.3 cpl</span>
       </div>
-      <div style="margin-top:16px">
-        <h3>Pass-Through Asymmetry</h3>
-        <div style="display:flex;gap:16px">
-          <div class="asym-stat" style="flex:1;background:#FEF2F2;border-radius:8px">
-            <div class="asym-number" style="color:#EF4444">1</div>
-            <div class="asym-label">Weeks for rises</div>
+
+      <div style="margin-top:24px">
+        <div class="card-title" style="font-size:13px">Pass-Through Speed</div>
+        <div class="card-desc">How fast crude oil changes flow through to TGP</div>
+        <div class="asym-grid">
+          <div class="asym-pill" style="background:#fff7ed">
+            <div class="asym-num" style="color:#f97316">1</div>
+            <div class="asym-unit" style="color:#f97316">Week to rise</div>
           </div>
-          <div class="asym-stat" style="flex:1;background:#EFF6FF;border-radius:8px">
-            <div class="asym-number" style="color:#3B82F6">5</div>
-            <div class="asym-label">Weeks for falls</div>
+          <div class="asym-pill" style="background:#eef2ff">
+            <div class="asym-num" style="color:#6366f1">5</div>
+            <div class="asym-unit" style="color:#6366f1">Weeks to fall</div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Asymmetry chart -->
+  <!-- Asymmetry Chart -->
   <div class="card">
-    <h2>Cumulative Pass-Through by Week</h2>
-    <p style="font-size:13px;color:#666;margin-bottom:12px">
-      How much of a 1 cpl crude oil change has flowed through to TGP by each week.
-      Rises (red) pass through faster than falls (blue).
-    </p>
+    <div class="card-title">Cumulative Pass-Through by Week</div>
+    <div class="card-desc">How much of a 1 cpl crude change has flowed into TGP by each week. Rises (orange) are passed through much faster than falls (purple).</div>
     
   </div>
 
-  <!-- Scenario table -->
+  <!-- Scenario Table -->
   <div class="card">
-    <h2>Scenario Matrix -- Where Could TGP Go?</h2>
-    <p style="font-size:13px;color:#666;margin-bottom:12px">
-      Predicted diesel TGP (cpl) under different crude oil and exchange rate scenarios.
-      Current conditions marked with *.
-    </p>
+    <div class="card-title">Scenario Matrix</div>
+    <div class="card-desc">Predicted diesel TGP under different crude oil prices and AUD/USD exchange rates. Green = lower, red = higher.</div>
     
-    <table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;
-                  box-shadow:0 1px 3px rgba(0,0,0,.08)">
-      <thead>
-        <tr style="background:#1C1F26;color:#F5F5F3">
-          <th style="padding:8px 12px;text-align:left">WTI / AUD</th>
-          <th style="padding:8px;text-align:center;">0.56</th><th style="padding:8px;text-align:center;">0.60</th><th style="padding:8px;text-align:center;">0.64</th><th style="padding:8px;text-align:center;font-weight:700;">0.68 *</th><th style="padding:8px;text-align:center;font-weight:700;">0.72 *</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$65</td><td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">188</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">180</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">172</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">166</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">160</td>
+    <div style="overflow-x:auto;border-radius:12px;border:1px solid #e2e8f0">
+      <table style="width:100%;border-collapse:collapse;min-width:500px">
+        <thead><tr style="background:#f8fafc"><th style="padding:12px 8px;text-align:left;font-weight:600;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">WTI USD</th><th style="padding:12px 8px;text-align:center;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">0.56</th><th style="padding:12px 8px;text-align:center;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">0.60</th><th style="padding:12px 8px;text-align:center;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">0.64</th><th style="padding:12px 8px;text-align:center;font-size:12px;font-weight:700;color:#1e293b;border-bottom:2px solid #e2e8f0">0.68 &#9668;</th><th style="padding:12px 8px;text-align:center;font-size:12px;font-weight:700;color:#1e293b;border-bottom:2px solid #e2e8f0">0.72 &#9668;</th></tr></thead>
+        <tbody><tr><td style="padding:10px 12px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">$65</td><td style="padding:10px 8px;text-align:center;background:rgb(131,188,52);color:#fff;font-size:13px;font-weight:500;">188</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(102,190,64);color:#fff;font-size:13px;font-weight:500;">180</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(76,193,75);color:#fff;font-size:13px;font-weight:500;">172</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(53,195,85);color:#fff;font-size:13px;font-weight:500;">166</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(34,197,94);color:#fff;font-size:13px;font-weight:500;">160</td>
 </tr>
-<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$75</td><td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">202</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">192</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">184</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">177</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">170</td>
+<tr><td style="padding:10px 12px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">$75</td><td style="padding:10px 8px;text-align:center;background:rgb(177,184,32);color:#fff;font-size:13px;font-weight:500;">202</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(145,186,45);color:#fff;font-size:13px;font-weight:500;">192</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(117,189,58);color:#fff;font-size:13px;font-weight:500;">184</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(92,191,68);color:#fff;font-size:13px;font-weight:500;">177</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(70,193,78);color:#fff;font-size:13px;font-weight:500;">170</td>
 </tr>
-<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap' style="font-weight:700">$85 *</td><td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">215</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">205</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">196</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">188</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">181</td>
+<tr><td style="padding:10px 12px;font-size:13px;font-weight:700;color:#1e293b;border-bottom:1px solid #f1f5f9">$85 &#9668;</td><td style="padding:10px 8px;text-align:center;background:rgb(224,179,12);color:#fff;font-size:13px;font-weight:500;">215</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(189,183,27);color:#fff;font-size:13px;font-weight:500;">205</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(157,185,40);color:#fff;font-size:13px;font-weight:500;">196</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(130,188,52);color:#fff;font-size:13px;font-weight:700;outline:2px solid #1e293b;outline-offset:-2px;border-radius:4px;">188</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(106,190,62);color:#fff;font-size:13px;font-weight:700;outline:2px solid #1e293b;outline-offset:-2px;border-radius:4px;">181</td>
 </tr>
-<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap' style="font-weight:700">$95 *</td><td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">228</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">217</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">208</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">199</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">191</td>
+<tr><td style="padding:10px 12px;font-size:13px;font-weight:700;color:#1e293b;border-bottom:1px solid #f1f5f9">$95 &#9668;</td><td style="padding:10px 8px;text-align:center;background:rgb(234,158,19);color:#fff;font-size:13px;font-weight:500;">228</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(232,179,8);color:#fff;font-size:13px;font-weight:500;">217</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(198,182,23);color:#fff;font-size:13px;font-weight:500;">208</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(168,184,35);color:#fff;font-size:13px;font-weight:700;outline:2px solid #1e293b;outline-offset:-2px;border-radius:4px;">199</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(142,187,47);color:#fff;font-size:13px;font-weight:700;outline:2px solid #1e293b;outline-offset:-2px;border-radius:4px;">191</td>
 </tr>
-<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$101</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">236</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">225</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">215</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">206</td>
-<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">198</td>
+<tr><td style="padding:10px 12px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">$101</td><td style="padding:10px 8px;text-align:center;background:rgb(235,142,27);color:#fff;font-size:13px;font-weight:500;">236</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(234,165,15);color:#fff;font-size:13px;font-weight:500;">225</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(223,179,12);color:#fff;font-size:13px;font-weight:500;">215</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(191,182,26);color:#fff;font-size:13px;font-weight:500;">206</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(164,185,38);color:#fff;font-size:13px;font-weight:500;">198</td>
 </tr>
-<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$110</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">249</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">236</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">225</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">216</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">207</td>
+<tr><td style="padding:10px 12px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">$110</td><td style="padding:10px 8px;text-align:center;background:rgb(236,119,40);color:#fff;font-size:13px;font-weight:500;">249</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(235,143,27);color:#fff;font-size:13px;font-weight:500;">236</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(234,164,15);color:#fff;font-size:13px;font-weight:500;">225</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(226,179,11);color:#fff;font-size:13px;font-weight:500;">216</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(196,182,24);color:#fff;font-size:13px;font-weight:500;">207</td>
 </tr>
-<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$120</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">262</td>
-<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">249</td>
-<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">237</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">227</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">217</td>
+<tr><td style="padding:10px 12px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">$120</td><td style="padding:10px 8px;text-align:center;background:rgb(237,93,54);color:#fff;font-size:13px;font-weight:500;">262</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(236,119,40);color:#fff;font-size:13px;font-weight:500;">249</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(235,142,27);color:#fff;font-size:13px;font-weight:500;">237</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(234,161,17);color:#fff;font-size:13px;font-weight:500;">227</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(232,179,8);color:#fff;font-size:13px;font-weight:500;">217</td>
 </tr>
-<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$130</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">275</td>
-<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">261</td>
-<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">249</td>
-<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">238</td>
-<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">228</td>
+<tr><td style="padding:10px 12px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">$130</td><td style="padding:10px 8px;text-align:center;background:rgb(239,68,68);color:#fff;font-size:13px;font-weight:500;">275</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(237,95,53);color:#fff;font-size:13px;font-weight:500;">261</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(236,119,40);color:#fff;font-size:13px;font-weight:500;">249</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(235,140,28);color:#fff;font-size:13px;font-weight:500;">238</td>
+<td style="padding:10px 8px;text-align:center;background:rgb(234,159,18);color:#fff;font-size:13px;font-weight:500;">228</td>
 </tr>
-
-      </tbody>
-    </table>
-    <p style="font-size:11px;color:#999;margin-top:8px">
-      * = closest to current conditions. Crack spread held at $35/bbl.
-      Values are predicted diesel TGP in cpl (inc GST).
+</tbody>
+      </table>
+    </div>
+    <p style="font-size:11px;color:#94a3b8;margin-top:10px">
+      Predicted diesel TGP (cpl inc GST). Current position marked. Crack spread held at $35/bbl USD.
     </p>
-    
   </div>
 
   <footer>
-    Data: AIP Terminal Gate Prices, yfinance (WTI, AUD/USD, Heating Oil futures).
-    Model: OLS multi-factor regression (R-sq 96.8%).
-    Updated daily at ~11am AEST.
+    Data sources: AIP Terminal Gate Prices &middot; Yahoo Finance (WTI, AUD/USD, Heating Oil futures)<br>
+    Model: OLS multi-factor regression with 1-week lag. R&sup2; = 96.8% on 2026-03-24.
   </footer>
 
 </div>
 
 <script>
-document.querySelectorAll('.trendChart').forEach(function(svg) {
-  var card = svg.closest('.card');
-  if (!card) return;
-  var tooltip = card.querySelector('.chart-tooltip');
-  var dot = svg.querySelector('.hoverDot');
-  var vline = svg.querySelector('.hoverLine');
-  if (!tooltip || !dot || !vline) return;
-  svg.querySelectorAll('.hover-target').forEach(function(rect) {
-    rect.onmouseenter = function() {
-      var x = this.getAttribute('data-x');
-      var y = this.getAttribute('data-y');
-      var dt = this.getAttribute('data-date');
-      var val = this.getAttribute('data-val');
-      dot.setAttribute('cx', x);
-      dot.setAttribute('cy', y);
-      dot.style.display = '';
-      vline.setAttribute('x1', x);
-      vline.setAttribute('x2', x);
-      vline.style.display = '';
-      tooltip.innerHTML = '<strong>' + dt + '</strong><br>TGP: ' + val + ' cpl';
-      tooltip.style.display = 'block';
-      var svgRect = svg.getBoundingClientRect();
-      var cardRect = card.getBoundingClientRect();
-      var vb = svg.viewBox.baseVal;
-      var pxX = (x / vb.width) * svgRect.width;
-      var pxY = (y / vb.height) * svgRect.height;
-      var tipLeft = pxX + (svgRect.left - cardRect.left) + 12;
-      var tipTop = pxY + (svgRect.top - cardRect.top) - 20;
-      if (tipLeft + 160 > cardRect.width) tipLeft = pxX + (svgRect.left - cardRect.left) - 160;
-      tooltip.style.left = tipLeft + 'px';
-      tooltip.style.top = tipTop + 'px';
+(function(){
+  var card=document.querySelector('.card[style*="relative"]');
+  if(!card)return;
+  var svg=card.querySelector('svg');
+  var tip=document.getElementById('chartTip');
+  var dot=svg.querySelector('.hd');
+  var vl=svg.querySelector('.hl');
+  if(!svg||!tip||!dot||!vl)return;
+  svg.querySelectorAll('.ht').forEach(function(r){
+    r.onmouseenter=function(){
+      var x=this.getAttribute('data-x'),y=this.getAttribute('data-y');
+      dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.style.display='';
+      vl.setAttribute('x1',x);vl.setAttribute('x2',x);vl.style.display='';
+      tip.innerHTML='<strong>'+this.getAttribute('data-d')+'</strong><br>'+this.getAttribute('data-v')+' cpl';
+      tip.style.display='block';
+      var sr=svg.getBoundingClientRect(),cr=card.getBoundingClientRect();
+      var vb=svg.viewBox.baseVal;
+      var px=(x/vb.width)*sr.width,py=(y/vb.height)*sr.height;
+      var l=px+(sr.left-cr.left)+14,t=py+(sr.top-cr.top)-24;
+      if(l+140>cr.width)l=px+(sr.left-cr.left)-140;
+      tip.style.left=l+'px';tip.style.top=t+'px';
     };
-    rect.onmouseleave = function() {
-      dot.style.display = 'none';
-      vline.style.display = 'none';
-      tooltip.style.display = 'none';
+    r.onmouseleave=function(){
+      dot.style.display='none';vl.style.display='none';tip.style.display='none';
     };
   });
-});
+})();
 </script>
 
 </body>
