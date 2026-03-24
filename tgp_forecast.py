@@ -673,6 +673,23 @@ def save_scenario_csv(forecasts: list[dict]) -> None:
     log.info("Saved scenarios to %s", path)
 
 
+def _save_trajectory_log(conditions: dict, trajectory: list[dict]) -> None:
+    """Append trajectory projections to a CSV log for future accuracy tracking."""
+    FORECAST_DIR.mkdir(exist_ok=True)
+    log_path = FORECAST_DIR / "trajectory_log.csv"
+    run_date = conditions.get("date", date.today().isoformat())
+
+    write_header = not log_path.exists()
+    with open(log_path, "a", encoding="utf-8") as f:
+        if write_header:
+            f.write("run_date,target_date,week,projected_tgp\n")
+        for t in trajectory:
+            week = t["week"]
+            target = (pd.Timestamp(run_date) + pd.Timedelta(weeks=week)).date()
+            f.write(f"{run_date},{target},{week},{t['projected_tgp']}\n")
+    log.info("Appended %d trajectory rows to %s", len(trajectory), log_path)
+
+
 def compute_tgp_trajectory(
     conditions: dict,
     decomposition: dict,
@@ -839,6 +856,10 @@ def main() -> None:
     save_prediction_log(conditions, decomposition, forecasts)
     save_scenario_csv(forecasts)
     save_latest_json(conditions, decomposition, asymmetry, model_results, combined)
+
+    # Log trajectory projections for future accuracy tracking
+    trajectory = compute_tgp_trajectory(conditions, decomposition, asymmetry)
+    _save_trajectory_log(conditions, trajectory)
 
     # Save report text
     FORECAST_DIR.mkdir(exist_ok=True)

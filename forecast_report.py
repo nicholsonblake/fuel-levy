@@ -521,26 +521,18 @@ def asym_bars(asymmetry, w=600, h=200):
 
 def load_prediction_accuracy(limit=8):
     """
-    Load prediction log and compute accuracy for days where we have both
-    a prior prediction and the actual outcome.
-    Returns list of dicts: [{date, predicted, actual, error, error_pct}, ...]
+    Compare past trajectory projections against actual outcomes.
+    Reads the trajectory log (one row per run_date with projected TGP for future weeks)
+    and checks actual TGP at those dates.
+
+    Falls back to next-day estimates from the prediction log if trajectory log
+    doesn't exist yet.
+
+    Returns list of dicts: [{run_date, target_date, projected, actual, error, error_pct}, ...]
     """
-    log_path = FORECAST_DIR / "prediction_log.csv"
-    if not log_path.exists():
-        return []
+    # Try trajectory log first (written by tgp_forecast.py if available)
+    traj_log_path = FORECAST_DIR / "trajectory_log.csv"
 
-    with open(log_path, "r", encoding="utf-8") as f:
-        rows = list(csv.DictReader(f))
-
-    if not rows:
-        return []
-
-    # Group by run_date and take the last prediction per date
-    by_date = {}
-    for row in rows:
-        by_date[row["run_date"]] = row
-
-    # Load actual TGP history to compare predictions against next-day actuals
     tgp_path = DATA_DIR / "diesel_tgp_history.csv"
     if not tgp_path.exists():
         return []
@@ -549,21 +541,63 @@ def load_prediction_accuracy(limit=8):
     tgp_dict = {str(d.date()): row["diesel_tgp"] for d, row in tgp_df.iterrows()}
 
     results = []
-    for run_date, row in sorted(by_date.items()):
-        predicted = float(row["predicted_tgp"])
-        # Compare prediction to the actual TGP on that date
-        actual = tgp_dict.get(run_date)
-        if actual is None:
-            continue
-        error = actual - predicted
-        error_pct = (error / actual) * 100 if actual else 0
-        results.append({
-            "date": run_date,
-            "predicted": predicted,
-            "actual": actual,
-            "error": error,
-            "error_pct": error_pct,
-        })
+
+    if traj_log_path.exists():
+        with open(traj_log_path, "r", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        for row in rows:
+            target = row.get("target_date", "")
+            actual = tgp_dict.get(target)
+            if actual is None:
+                continue
+            projected = float(row["projected_tgp"])
+            error = actual - projected
+            error_pct = (error / actual) * 100 if actual else 0
+            results.append({
+                "run_date": row["run_date"],
+                "target_date": target,
+                "projected": projected,
+                "actual": actual,
+                "error": error,
+                "error_pct": error_pct,
+            })
+        return results[-limit:]
+
+    # Fallback: use prediction_log.csv but compare Week 1 trajectory estimates
+    # against actual TGP one week later
+    log_path = FORECAST_DIR / "prediction_log.csv"
+    if not log_path.exists():
+        return []
+
+    with open(log_path, "r", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    # Group by run_date, take last per date
+    by_date = {}
+    for row in rows:
+        by_date[row["run_date"]] = row
+
+    # For each run_date, check if we have actual TGP 5 trading days later
+    sorted_dates = sorted(by_date.keys())
+    for run_date in sorted_dates:
+        # Find actual TGP ~5 trading days after run_date
+        rd = pd.Timestamp(run_date)
+        for offset in range(5, 10):  # look 5-9 calendar days ahead for next trading day
+            target = str((rd + pd.Timedelta(days=offset)).date())
+            actual = tgp_dict.get(target)
+            if actual is not None:
+                predicted = float(by_date[run_date]["predicted_tgp"])
+                error = actual - predicted
+                error_pct = (error / actual) * 100 if actual else 0
+                results.append({
+                    "run_date": run_date,
+                    "target_date": target,
+                    "projected": predicted,
+                    "actual": actual,
+                    "error": error,
+                    "error_pct": error_pct,
+                })
+                break
 
     return results[-limit:]
 
@@ -574,15 +608,15 @@ def accuracy_card(accuracy_data):
         return (
             '<div class="card">'
             '<div class="card-title">Forecast Accuracy</div>'
-            '<div class="card-desc">Tracking prediction vs actual TGP over time. '
-            'Accuracy data will appear here once predictions span multiple days.</div>'
+            '<div class="card-desc">Tracking projected TGP vs actual outcomes. '
+            'Accuracy data will appear here once trajectory projections can be compared against subsequent actuals '
+            '(requires at least one week of daily runs).</div>'
             '</div>'
         )
 
     # Summary stats
     errors = [abs(a["error_pct"]) for a in accuracy_data]
     avg_error = sum(errors) / len(errors)
-    max_error = max(errors)
 
     # Build table rows
     rows = ""
@@ -590,8 +624,9 @@ def accuracy_card(accuracy_data):
         err_color = "#22c55e" if abs(a["error_pct"]) < 5 else "#f59e0b" if abs(a["error_pct"]) < 10 else "#ef4444"
         rows += (
             f'<tr>'
-            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9">{a["date"]}</td>'
-            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">{a["predicted"]:.0f}</td>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9">{a["run_date"]}</td>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9">{a["target_date"]}</td>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">{a["projected"]:.0f}</td>'
             f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">{a["actual"]:.0f}</td>'
             f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;color:{err_color};font-weight:600">'
             f'{a["error"]:+.0f} ({a["error_pct"]:+.1f}%)</td>'
@@ -603,13 +638,14 @@ def accuracy_card(accuracy_data):
         f'<div class="card">'
         f'<div class="card-title">Forecast Accuracy '
         f'<span class="badge" style="background:{accuracy_badge_color};margin-left:8px">Avg error {avg_error:.1f}%</span></div>'
-        f'<div class="card-desc">How well the model predicted actual TGP. '
-        f'Predicted = model equilibrium on that date vs what TGP actually was.</div>'
+        f'<div class="card-desc">How well trajectory projections matched actual TGP. '
+        f'Each row compares what we projected on the run date vs what TGP actually was on the target date.</div>'
         f'<div style="overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0">'
         f'<table style="width:100%;border-collapse:collapse">'
         f'<thead><tr style="background:#f8fafc">'
-        f'<th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Date</th>'
-        f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Predicted</th>'
+        f'<th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Run Date</th>'
+        f'<th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Target Date</th>'
+        f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Projected</th>'
         f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Actual</th>'
         f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Error</th>'
         f'</tr></thead>'
