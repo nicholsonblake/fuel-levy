@@ -673,17 +673,83 @@ def save_scenario_csv(forecasts: list[dict]) -> None:
     log.info("Saved scenarios to %s", path)
 
 
+def compute_tgp_trajectory(
+    conditions: dict,
+    decomposition: dict,
+    asymmetry: dict,
+    weeks: int = 8,
+) -> list[dict]:
+    """
+    Project where TGP is likely headed over the next N weeks,
+    assuming crude and FX stay at current levels.
+
+    Uses the asymmetric pass-through curves to model how fast
+    TGP converges toward model equilibrium.
+    """
+    actual = conditions["diesel_tgp_actual"]
+    predicted = decomposition["predicted_total"]
+    gap = actual - predicted
+
+    cum_up = asymmetry.get("cum_up", [])
+    cum_down = asymmetry.get("cum_down", [])
+
+    trajectory = []
+    for w in range(weeks + 1):
+        if abs(gap) < 1:
+            # Already at equilibrium
+            trajectory.append({"week": w, "projected_tgp": round(predicted, 1)})
+        elif gap > 0:
+            # TGP above equilibrium — expect decline (use fall curve)
+            if cum_down and w < len(cum_down):
+                # Normalise cum_down to get fraction of gap closed
+                total = abs(cum_down[-1]) if abs(cum_down[-1]) > 0 else 1
+                frac = abs(cum_down[w]) / total
+            else:
+                frac = min(w / 5.0, 1.0)
+            projected = actual - gap * frac
+            trajectory.append({"week": w, "projected_tgp": round(projected, 1)})
+        else:
+            # TGP below equilibrium — expect rise (use rise curve)
+            if cum_up and w < len(cum_up):
+                total = cum_up[-1] if cum_up[-1] > 0 else 1
+                frac = cum_up[w] / total
+            else:
+                frac = min(w / 1.5, 1.0)
+            projected = actual + abs(gap) * frac
+            trajectory.append({"week": w, "projected_tgp": round(projected, 1)})
+
+    return trajectory
+
+
 def save_latest_json(
     conditions: dict,
     decomposition: dict,
     asymmetry: dict,
     model_results: dict,
+    combined: pd.DataFrame | None = None,
 ) -> None:
     """Save latest forecast as JSON for consumption by other tools."""
     FORECAST_DIR.mkdir(exist_ok=True)
     path = FORECAST_DIR / "latest.json"
 
     full_model = model_results["full"]
+
+    # Build WTI history for charting (last 120 days)
+    wti_history = []
+    if combined is not None:
+        cutoff = combined.index.max() - pd.Timedelta(days=120)
+        recent = combined[combined.index >= cutoff].dropna(subset=["WTI_USD"])
+        for dt, row in recent.iterrows():
+            wti_history.append({
+                "date": str(dt.date()),
+                "wti_usd": round(float(row["WTI_USD"]), 2),
+                "wti_aud_cpl": round(float(row.get("WTI_AUD_CPL", 0)), 1),
+            })
+
+    # Compute TGP trajectory projection
+    trajectory = compute_tgp_trajectory(
+        conditions, decomposition, asymmetry
+    )
 
     output = {
         "run_date": date.today().isoformat(),
@@ -704,7 +770,11 @@ def save_latest_json(
             "weeks_90pct_fall": asymmetry.get("weeks_90pct_down"),
             "total_up_passthrough": round(asymmetry.get("total_up_passthrough", 0), 4),
             "total_down_passthrough": round(asymmetry.get("total_down_passthrough", 0), 4),
+            "cum_up": [round(v, 4) for v in asymmetry.get("cum_up", [])],
+            "cum_down": [round(v, 4) for v in asymmetry.get("cum_down", [])],
         },
+        "wti_history": wti_history,
+        "trajectory": trajectory,
     }
 
     with open(path, "w") as f:
@@ -767,7 +837,7 @@ def main() -> None:
     # Always save outputs
     save_prediction_log(conditions, decomposition, forecasts)
     save_scenario_csv(forecasts)
-    save_latest_json(conditions, decomposition, asymmetry, model_results)
+    save_latest_json(conditions, decomposition, asymmetry, model_results, combined)
 
     # Save report text
     FORECAST_DIR.mkdir(exist_ok=True)

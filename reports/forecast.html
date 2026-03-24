@@ -336,6 +336,12 @@
     </svg>
   </div>
 
+  <!-- Barrel Price Tracking -->
+  
+
+  <!-- TGP Trajectory Projection -->
+  
+
   <!-- Decomposition + Inputs -->
   <div class="two-col">
     <div class="card">
@@ -539,6 +545,37 @@
       var px=(x/vb.width)*sr.width,py=(y/vb.height)*sr.height;
       var l=px+(sr.left-cr.left)+14,t=py+(sr.top-cr.top)-24;
       if(l+140>cr.width)l=px+(sr.left-cr.left)-140;
+      tip.style.left=l+'px';tip.style.top=t+'px';
+    };
+    r.onmouseleave=function(){
+      dot.style.display='none';vl.style.display='none';tip.style.display='none';
+    };
+  });
+})();
+
+// Barrel chart hover
+(function(){
+  var cards=document.querySelectorAll('.card[style*="relative"]');
+  if(cards.length<2)return;
+  var card=cards[1];
+  var svg=document.getElementById('barrelSvg');
+  var tip=document.getElementById('barrelTip');
+  if(!svg||!tip)return;
+  var dot=svg.querySelector('.hd2');
+  var vl=svg.querySelector('.hl2');
+  if(!dot||!vl)return;
+  svg.querySelectorAll('.ht2').forEach(function(r){
+    r.onmouseenter=function(){
+      var x=this.getAttribute('data-x'),y=this.getAttribute('data-y');
+      dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.style.display='';
+      vl.setAttribute('x1',x);vl.setAttribute('x2',x);vl.style.display='';
+      tip.innerHTML='<strong>'+this.getAttribute('data-d')+'</strong><br>'+this.getAttribute('data-v');
+      tip.style.display='block';
+      var sr=svg.getBoundingClientRect(),cr=card.getBoundingClientRect();
+      var vb=svg.viewBox.baseVal;
+      var px=(x/vb.width)*sr.width,py=(y/vb.height)*sr.height;
+      var l=px+(sr.left-cr.left)+14,t=py+(sr.top-cr.top)-24;
+      if(l+180>cr.width)l=px+(sr.left-cr.left)-180;
       tip.style.left=l+'px';tip.style.top=t+'px';
     };
     r.onmouseleave=function(){
