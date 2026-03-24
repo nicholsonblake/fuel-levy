@@ -517,11 +517,36 @@ def generate_html_report() -> Path:
     weekly_history = load_history("weekly")
     monthly_history = load_history("monthly")
 
+    # Compute period-over-period deltas from history
+    def _get_prior_levy(history: list[dict], current_levy: Optional[float], key: str = "levy_pct") -> Optional[float]:
+        """Return the second-most-recent levy from history (the one before current)."""
+        if not history or current_levy is None:
+            return None
+        if len(history) >= 2:
+            return float(history[-2][key])
+        return None
+
+    daily_prior = _get_prior_levy(daily_history, daily_levy["levy_pct"] if daily_levy else None)
+    weekly_prior = _get_prior_levy(weekly_history, weekly_levy["levy_pct"] if weekly_levy else None)
+    monthly_prior = _get_prior_levy(monthly_history, monthly_levy["levy_pct"] if monthly_levy else None)
+
+    def _delta_badge(current_pct: float, prior_pct: Optional[float], label: str) -> str:
+        """Render a compact delta badge like '+8.72pp vs last week'."""
+        if prior_pct is None:
+            return ""
+        delta = current_pct - prior_pct
+        color = "#C45B5B" if delta > 0 else "#3B8A6A" if delta < 0 else "#888"
+        arrow = "&#9650;" if delta > 0 else "&#9660;" if delta < 0 else "&#8212;"
+        return (
+            f'<div class="delta-badge" style="text-align:center;font-size:13px;color:{color};margin-bottom:12px;">'
+            f'{arrow} <strong>{delta:+.2f}pp</strong> vs prior {label}</div>'
+        )
+
     # Build levy cards
     def levy_card(title: str, subtitle: str, applicable: str, levy: Optional[dict],
                   avg_cpl: Optional[float], terminals: Optional[dict],
                   days: Optional[int] = None, accent: str = "#C17F4E",
-                  stale: bool = False) -> str:
+                  stale: bool = False, delta_html: str = "") -> str:
         if levy is None:
             return f'<div class="card" style="border-top:4px solid #C45B5B;"><h2>{title}</h2><p class="subtitle">{subtitle}</p><p class="error">Data unavailable</p></div>'
         days_str = f" ({days} trading days)" if days else ""
@@ -533,6 +558,7 @@ def generate_html_report() -> Path:
             <p class="subtitle">{subtitle}{days_str}</p>
             <p class="applicable">Applicable to: <strong>{applicable}</strong></p>
             <div class="levy-hero"><span class="levy-number">{levy['levy_pct']:.2f}%</span><span class="levy-label">Fuel Levy</span></div>
+            {delta_html}
             <table class="details">
                 <tr><td>Avg Diesel TGP</td><td><strong>${avg_cpl/100:.4f}/L</strong></td></tr>
                 <tr><td>Base Price</td><td>${levy['base_dollar']:.2f}/L</td></tr>
@@ -596,10 +622,24 @@ def generate_html_report() -> Path:
         w_levy = lev(weekly_avg) if weekly_avg else None
         m_levy = lev(monthly_avg) if monthly_avg else None
 
+        # Compute per-config deltas (prior history values recalculated with this config's base/weighting)
+        d_delta = ""
+        if d_levy and daily_prior is not None:
+            prior_d_lev = lev(float(daily_history[-2]["avg_tgp_cpl"]))
+            d_delta = _delta_badge(d_levy["levy_pct"], prior_d_lev["levy_pct"], "day")
+        w_delta = ""
+        if w_levy and weekly_prior is not None:
+            prior_w_lev = lev(float(weekly_history[-2]["avg_tgp_cpl"]))
+            w_delta = _delta_badge(w_levy["levy_pct"], prior_w_lev["levy_pct"], "week")
+        m_delta = ""
+        if m_levy and monthly_prior is not None:
+            prior_m_lev = lev(float(monthly_history[-2]["avg_tgp_cpl"]))
+            m_delta = _delta_badge(m_levy["levy_pct"], prior_m_lev["levy_pct"], "month")
+
         cards = '<div class="grid">'
-        cards += levy_card("Daily", daily_sub, daily_app, d_levy, daily_avg, daily_terminals, accent="#C17F4E", stale=daily_stale)
-        cards += levy_card("Weekly", weekly_sub, weekly_app, w_levy, weekly_avg, weekly_terminals, weekly_days, accent="#3B8A6A", stale=weekly_stale)
-        cards += levy_card("Monthly", monthly_sub, monthly_app, m_levy, monthly_avg, monthly_terminals, monthly_days, accent="#C49B3B", stale=monthly_stale)
+        cards += levy_card("Daily", daily_sub, daily_app, d_levy, daily_avg, daily_terminals, accent="#C17F4E", stale=daily_stale, delta_html=d_delta)
+        cards += levy_card("Weekly", weekly_sub, weekly_app, w_levy, weekly_avg, weekly_terminals, weekly_days, accent="#3B8A6A", stale=weekly_stale, delta_html=w_delta)
+        cards += levy_card("Monthly", monthly_sub, monthly_app, m_levy, monthly_avg, monthly_terminals, monthly_days, accent="#C49B3B", stale=monthly_stale, delta_html=m_delta)
         cards += "</div>"
 
         formula = f'<div class="formula">Fuel Levy = <code>((Avg Diesel TGP - Base ${base/100:.2f}/L) / Base) x {wt*100:.0f}% weighting</code></div>'
@@ -725,6 +765,82 @@ def generate_html_report() -> Path:
         display = "block" if i == 0 else "none"
         page_divs += f'<div id="page-{cfg["id"]}" class="page-content" style="display:{display};">{build_page(cfg)}</div>\n'
 
+    # Executive summary
+    def _build_exec_summary() -> str:
+        if daily_levy is None:
+            return ""
+        levy_pct = daily_levy["levy_pct"]
+        tgp_dollar = daily_avg / 100 if daily_avg else 0
+
+        # Trend description from daily history
+        trend = ""
+        if len(daily_history) >= 6:
+            week_ago_tgp = float(daily_history[-6]["avg_tgp_cpl"])
+            tgp_change = daily_avg - week_ago_tgp
+            tgp_change_pct = (tgp_change / week_ago_tgp) * 100 if week_ago_tgp else 0
+            if abs(tgp_change_pct) > 5:
+                direction = "surged" if tgp_change > 0 else "fallen"
+                trend = f"Diesel TGP has {direction} {abs(tgp_change_pct):.0f}% over the past week to ${tgp_dollar:.2f}/L."
+            elif abs(tgp_change_pct) > 1:
+                direction = "risen" if tgp_change > 0 else "eased"
+                trend = f"Diesel TGP has {direction} {abs(tgp_change_pct):.1f}% over the past week to ${tgp_dollar:.2f}/L."
+            else:
+                trend = f"Diesel TGP is steady at ${tgp_dollar:.2f}/L."
+
+        # Monthly comparison
+        monthly_context = ""
+        if monthly_levy:
+            m_pct = monthly_levy["levy_pct"]
+            gap = levy_pct - m_pct
+            if abs(gap) > 2:
+                monthly_context = f" Today's daily levy ({levy_pct:.1f}%) is {abs(gap):.0f}pp {'above' if gap > 0 else 'below'} the current monthly rate ({m_pct:.1f}%)."
+
+        # Forecast context if available
+        forecast_context = ""
+        try:
+            forecast_path = Path(__file__).parent / "forecast" / "latest.json"
+            if forecast_path.exists():
+                with open(forecast_path) as f:
+                    fc = json.load(f)
+                residual = fc.get("decomposition", {}).get("residual", 0)
+                trajectory = fc.get("trajectory", [])
+                if trajectory and len(trajectory) > 1:
+                    end_tgp = trajectory[-1]["projected_tgp"]
+                    weeks = trajectory[-1]["week"]
+                    if residual > 20:
+                        forecast_context = f" Forecast model expects TGP to ease toward {end_tgp:.0f} cpl over {weeks} weeks."
+                    elif residual < -20:
+                        forecast_context = f" Forecast model expects further rises toward {end_tgp:.0f} cpl over {weeks} weeks."
+        except Exception:
+            pass
+
+        summary_text = f"{trend}{monthly_context}{forecast_context}"
+        if not summary_text.strip():
+            return ""
+
+        # Pick banner color based on whether levy is rising sharply
+        if len(daily_history) >= 2:
+            prior = float(daily_history[-2]["levy_pct"])
+            delta = levy_pct - prior
+        else:
+            delta = 0
+        if delta > 2:
+            bg, border, icon = "#FDF2F2", "#F5C6C6", "&#9650;"
+        elif delta < -2:
+            bg, border, icon = "#F0FDF4", "#BBF7D0", "&#9660;"
+        else:
+            bg, border, icon = "#FEFCE8", "#FDE68A", "&#8212;"
+
+        return (
+            f'<div class="exec-summary" style="background:{bg};border:1px solid {border};border-radius:8px;'
+            f'padding:16px 20px;margin-bottom:24px;font-size:14px;line-height:1.6;">'
+            f'<div style="font-weight:600;margin-bottom:4px;color:#1C1F26;">{icon} Executive Summary</div>'
+            f'<div style="color:#555;">{summary_text}</div>'
+            f'</div>'
+        )
+
+    exec_summary = _build_exec_summary()
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -805,6 +921,7 @@ def generate_html_report() -> Path:
 </div>
 
 <div class="main">
+    {exec_summary}
     {page_divs}
     <footer>
         Data sourced from Australian Institute of Petroleum (aip.com.au). All prices inclusive of GST.
