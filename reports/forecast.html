@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diesel TGP Forecast | Booth Transport</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F5F5F3;
+    color: #1C1F26;
+    line-height: 1.5;
+  }
+  .header {
+    background: #1C1F26;
+    color: #F5F5F3;
+    padding: 20px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header .meta { font-size: 12px; color: #999; }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  .hero-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .hero-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    text-align: center;
+  }
+  .hero-label { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+  .hero-number { font-size: 42px; font-weight: 700; margin: 4px 0; }
+  .hero-sub { font-size: 13px; color: #666; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #E0DDD8;
+  }
+  .card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #555;
+  }
+
+  .direction-banner {
+    background: #fff;
+    border-left: 5px solid #EF4444;
+    border-radius: 8px;
+    padding: 16px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .direction-arrow {
+    font-size: 36px;
+    color: #EF4444;
+    line-height: 1;
+  }
+  .direction-text { font-size: 16px; font-weight: 600; }
+  .direction-detail { font-size: 13px; color: #666; margin-top: 4px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) {
+    .hero-row { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F0EDEA; }
+  .stat-label { color: #666; font-size: 14px; }
+  .stat-value { font-weight: 600; font-size: 14px; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .chart-tooltip {
+    display: none;
+    position: absolute;
+    background: #1C1F26;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  .asym-stat { text-align: center; padding: 16px; }
+  .asym-number { font-size: 28px; font-weight: 700; }
+  .asym-label { font-size: 12px; color: #999; text-transform: uppercase; }
+
+  footer { text-align: center; font-size: 11px; color: #999; padding: 24px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Booth Transport</h1>
+    <div class="meta">Diesel TGP Forecast Dashboard</div>
+  </div>
+  <div style="text-align:right">
+    <div class="meta">Updated: 2026-03-24</div>
+    <div class="meta">Model R-sq: <span class="badge" style="background:#22C55E">96.8%</span></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Hero numbers -->
+  <div class="hero-row">
+    <div class="hero-card">
+      <div class="hero-label">Current Diesel TGP</div>
+      <div class="hero-number" style="color:#C17F4E">295.6</div>
+      <div class="hero-sub">cpl (inc GST) | +52.3 cpl (+21.5%) vs last week</div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-label">Model Equilibrium</div>
+      <div class="hero-number" style="color:#3B82F6">229</div>
+      <div class="hero-sub">cpl predicted at current inputs</div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-label">Gap</div>
+      <div class="hero-number" style="color:#EF4444">+67</div>
+      <div class="hero-sub">cpl above equilibrium</div>
+    </div>
+  </div>
+
+  <!-- Direction banner -->
+  <div class="direction-banner">
+    <div class="direction-arrow">&#9660;</div>
+    <div>
+      <div class="direction-text">OVERSHOOTING by 67 cpl (23%) -- expect decline</div>
+      <div class="direction-detail">
+        Rises pass through in ~1 week(s).
+        Falls take ~5 weeks.
+        TGP will drift down as the lag effect unwinds.
+      </div>
+    </div>
+  </div>
+
+  <!-- Trend chart -->
+  <div class="card" style="position:relative">
+    <h2>Diesel TGP -- Last 120 Days</h2>
+    <div class="chart-tooltip"></div>
+    <svg viewBox="0 0 700 260" class="trendChart"
+         style="width:100%;max-width:700px;height:auto">
+      <line x1="55" y1="220" x2="680" y2="220" stroke="#E8E6E1" stroke-width="1"/>
+<text x="47" y="220" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">143</text>
+<line x1="55" y1="180" x2="680" y2="180" stroke="#E8E6E1" stroke-width="1"/>
+<text x="47" y="180" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">177</text>
+<line x1="55" y1="140" x2="680" y2="140" stroke="#E8E6E1" stroke-width="1"/>
+<text x="47" y="140" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">210</text>
+<line x1="55" y1="100" x2="680" y2="100" stroke="#E8E6E1" stroke-width="1"/>
+<text x="47" y="100" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">244</text>
+<line x1="55" y1="60" x2="680" y2="60" stroke="#E8E6E1" stroke-width="1"/>
+<text x="47" y="60" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">277</text>
+<line x1="55" y1="20" x2="680" y2="20" stroke="#E8E6E1" stroke-width="1"/>
+<text x="47" y="20" text-anchor="end" font-size="11" fill="#999" dominant-baseline="middle">310</text>
+
+      <line x1="55" y1="118" x2="680" y2="118" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="682" y="118" font-size="10" fill="#3B82F6" dominant-baseline="middle">Model: 229</text>
+
+      <polygon points="55.0,220.0 55.0,179.6 62.4,179.6 69.7,180.9 77.1,182.5 84.4,185.0 91.8,187.6 99.1,189.0 106.5,190.4 113.8,191.0 121.2,191.2 128.5,191.9 135.9,192.3 143.2,192.9 150.6,193.7 157.9,194.7 165.3,195.5 172.6,196.2 180.0,197.5 187.4,198.7 194.7,200.1 202.1,200.9 209.4,201.5 216.8,202.4 224.1,202.8 231.5,202.9 238.8,202.8 246.2,202.8 253.5,203.2 260.9,203.2 268.2,203.2 275.6,203.4 282.9,203.5 290.3,203.6 297.6,203.9 305.0,204.4 312.4,204.8 319.7,205.1 327.1,204.8 334.4,204.6 341.8,203.4 349.1,202.1 356.5,201.7 363.8,200.4 371.2,199.8 378.5,199.5 385.9,199.0 393.2,199.0 400.6,198.5 407.9,198.6 415.3,198.9 422.6,197.7 430.0,197.7 437.4,197.3 444.7,197.1 452.1,196.9 459.4,196.6 466.8,196.3 474.1,196.2 481.5,196.2 488.8,196.2 496.2,196.2 503.5,196.7 510.9,197.5 518.2,197.8 525.6,198.1 532.9,197.7 540.3,196.3 547.6,194.8 555.0,194.1 562.4,193.6 569.7,193.2 577.1,192.9 584.4,188.9 591.8,183.7 599.1,169.4 606.5,153.4 613.8,128.0 621.2,119.0 628.5,100.3 635.9,93.4 643.2,80.5 650.6,72.9 657.9,66.3 665.3,58.9 672.6,53.5 680.0,37.7 680.0,220.0" fill="url(#areaGrad)" opacity="0.3"/>
+      <polyline points="55.0,179.6 62.4,179.6 69.7,180.9 77.1,182.5 84.4,185.0 91.8,187.6 99.1,189.0 106.5,190.4 113.8,191.0 121.2,191.2 128.5,191.9 135.9,192.3 143.2,192.9 150.6,193.7 157.9,194.7 165.3,195.5 172.6,196.2 180.0,197.5 187.4,198.7 194.7,200.1 202.1,200.9 209.4,201.5 216.8,202.4 224.1,202.8 231.5,202.9 238.8,202.8 246.2,202.8 253.5,203.2 260.9,203.2 268.2,203.2 275.6,203.4 282.9,203.5 290.3,203.6 297.6,203.9 305.0,204.4 312.4,204.8 319.7,205.1 327.1,204.8 334.4,204.6 341.8,203.4 349.1,202.1 356.5,201.7 363.8,200.4 371.2,199.8 378.5,199.5 385.9,199.0 393.2,199.0 400.6,198.5 407.9,198.6 415.3,198.9 422.6,197.7 430.0,197.7 437.4,197.3 444.7,197.1 452.1,196.9 459.4,196.6 466.8,196.3 474.1,196.2 481.5,196.2 488.8,196.2 496.2,196.2 503.5,196.7 510.9,197.5 518.2,197.8 525.6,198.1 532.9,197.7 540.3,196.3 547.6,194.8 555.0,194.1 562.4,193.6 569.7,193.2 577.1,192.9 584.4,188.9 591.8,183.7 599.1,169.4 606.5,153.4 613.8,128.0 621.2,119.0 628.5,100.3 635.9,93.4 643.2,80.5 650.6,72.9 657.9,66.3 665.3,58.9 672.6,53.5 680.0,37.7" fill="none" stroke="#C17F4E" stroke-width="2.5"
+                stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="680.0" cy="37.7" r="5" fill="#C17F4E" stroke="#fff" stroke-width="2"/>
+      <text x="672.0" y="25.7" font-size="13" font-weight="700"
+            fill="#C17F4E" text-anchor="end">295.6</text>
+      <line x1="55" y1="20" x2="55" y2="220"
+            stroke="#CCC" stroke-width="1"/>
+      <line x1="55" y1="220" x2="680"
+            y2="220" stroke="#CCC" stroke-width="1"/>
+      <rect x="51" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="55.0" data-y="179.6" data-date="24 Nov 2025" data-val="177.1"/>
+<rect x="59" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="62.4" data-y="179.6" data-date="25 Nov 2025" data-val="177.1"/>
+<rect x="66" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="69.7" data-y="180.9" data-date="26 Nov 2025" data-val="176.0"/>
+<rect x="73" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="77.1" data-y="182.5" data-date="27 Nov 2025" data-val="174.7"/>
+<rect x="81" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="84.4" data-y="185.0" data-date="28 Nov 2025" data-val="172.6"/>
+<rect x="88" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="91.8" data-y="187.6" data-date="01 Dec 2025" data-val="170.4"/>
+<rect x="95" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="99.1" data-y="189.0" data-date="02 Dec 2025" data-val="169.2"/>
+<rect x="103" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="106.5" data-y="190.4" data-date="03 Dec 2025" data-val="168.1"/>
+<rect x="110" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="113.8" data-y="191.0" data-date="04 Dec 2025" data-val="167.6"/>
+<rect x="118" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="121.2" data-y="191.2" data-date="05 Dec 2025" data-val="167.4"/>
+<rect x="125" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="128.5" data-y="191.9" data-date="08 Dec 2025" data-val="166.8"/>
+<rect x="132" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="135.9" data-y="192.3" data-date="09 Dec 2025" data-val="166.5"/>
+<rect x="140" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="143.2" data-y="192.9" data-date="10 Dec 2025" data-val="166.0"/>
+<rect x="147" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="150.6" data-y="193.7" data-date="11 Dec 2025" data-val="165.3"/>
+<rect x="154" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="157.9" data-y="194.7" data-date="12 Dec 2025" data-val="164.5"/>
+<rect x="162" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="165.3" data-y="195.5" data-date="15 Dec 2025" data-val="163.8"/>
+<rect x="169" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="172.6" data-y="196.2" data-date="16 Dec 2025" data-val="163.2"/>
+<rect x="176" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="180.0" data-y="197.5" data-date="17 Dec 2025" data-val="162.1"/>
+<rect x="184" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="187.4" data-y="198.7" data-date="18 Dec 2025" data-val="161.1"/>
+<rect x="191" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="194.7" data-y="200.1" data-date="19 Dec 2025" data-val="160.0"/>
+<rect x="198" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="202.1" data-y="200.9" data-date="22 Dec 2025" data-val="159.3"/>
+<rect x="206" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="209.4" data-y="201.5" data-date="23 Dec 2025" data-val="158.8"/>
+<rect x="213" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="216.8" data-y="202.4" data-date="24 Dec 2025" data-val="158.0"/>
+<rect x="220" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="224.1" data-y="202.8" data-date="25 Dec 2025" data-val="157.7"/>
+<rect x="228" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="231.5" data-y="202.9" data-date="26 Dec 2025" data-val="157.6"/>
+<rect x="235" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="238.8" data-y="202.8" data-date="29 Dec 2025" data-val="157.7"/>
+<rect x="243" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="246.2" data-y="202.8" data-date="30 Dec 2025" data-val="157.7"/>
+<rect x="250" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="253.5" data-y="203.2" data-date="31 Dec 2025" data-val="157.4"/>
+<rect x="257" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="260.9" data-y="203.2" data-date="01 Jan 2026" data-val="157.4"/>
+<rect x="265" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="268.2" data-y="203.2" data-date="02 Jan 2026" data-val="157.4"/>
+<rect x="272" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="275.6" data-y="203.4" data-date="05 Jan 2026" data-val="157.2"/>
+<rect x="279" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="282.9" data-y="203.5" data-date="06 Jan 2026" data-val="157.1"/>
+<rect x="287" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="290.3" data-y="203.6" data-date="07 Jan 2026" data-val="157.0"/>
+<rect x="294" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="297.6" data-y="203.9" data-date="08 Jan 2026" data-val="156.8"/>
+<rect x="301" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="305.0" data-y="204.4" data-date="09 Jan 2026" data-val="156.4"/>
+<rect x="309" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="312.4" data-y="204.8" data-date="12 Jan 2026" data-val="156.0"/>
+<rect x="316" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="319.7" data-y="205.1" data-date="13 Jan 2026" data-val="155.8"/>
+<rect x="323" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="327.1" data-y="204.8" data-date="14 Jan 2026" data-val="156.0"/>
+<rect x="331" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="334.4" data-y="204.6" data-date="15 Jan 2026" data-val="156.2"/>
+<rect x="338" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="341.8" data-y="203.4" data-date="16 Jan 2026" data-val="157.2"/>
+<rect x="345" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="349.1" data-y="202.1" data-date="19 Jan 2026" data-val="158.3"/>
+<rect x="353" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="356.5" data-y="201.7" data-date="20 Jan 2026" data-val="158.6"/>
+<rect x="360" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="363.8" data-y="200.4" data-date="21 Jan 2026" data-val="159.7"/>
+<rect x="368" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="371.2" data-y="199.8" data-date="22 Jan 2026" data-val="160.2"/>
+<rect x="375" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="378.5" data-y="199.5" data-date="23 Jan 2026" data-val="160.5"/>
+<rect x="382" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="385.9" data-y="199.0" data-date="26 Jan 2026" data-val="160.9"/>
+<rect x="390" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="393.2" data-y="199.0" data-date="27 Jan 2026" data-val="160.9"/>
+<rect x="397" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="400.6" data-y="198.5" data-date="28 Jan 2026" data-val="161.3"/>
+<rect x="404" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="407.9" data-y="198.6" data-date="29 Jan 2026" data-val="161.2"/>
+<rect x="412" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="415.3" data-y="198.9" data-date="30 Jan 2026" data-val="161.0"/>
+<rect x="419" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="422.6" data-y="197.7" data-date="02 Feb 2026" data-val="162.0"/>
+<rect x="426" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="430.0" data-y="197.7" data-date="03 Feb 2026" data-val="162.0"/>
+<rect x="434" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="437.4" data-y="197.3" data-date="04 Feb 2026" data-val="162.3"/>
+<rect x="441" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="444.7" data-y="197.1" data-date="05 Feb 2026" data-val="162.5"/>
+<rect x="448" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="452.1" data-y="196.9" data-date="06 Feb 2026" data-val="162.6"/>
+<rect x="456" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="459.4" data-y="196.6" data-date="09 Feb 2026" data-val="162.9"/>
+<rect x="463" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="466.8" data-y="196.3" data-date="10 Feb 2026" data-val="163.1"/>
+<rect x="470" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="474.1" data-y="196.2" data-date="11 Feb 2026" data-val="163.2"/>
+<rect x="478" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="481.5" data-y="196.2" data-date="12 Feb 2026" data-val="163.2"/>
+<rect x="485" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="488.8" data-y="196.2" data-date="13 Feb 2026" data-val="163.2"/>
+<rect x="493" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="496.2" data-y="196.2" data-date="16 Feb 2026" data-val="163.2"/>
+<rect x="500" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="503.5" data-y="196.7" data-date="17 Feb 2026" data-val="162.8"/>
+<rect x="507" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="510.9" data-y="197.5" data-date="18 Feb 2026" data-val="162.1"/>
+<rect x="515" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="518.2" data-y="197.8" data-date="19 Feb 2026" data-val="161.9"/>
+<rect x="522" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="525.6" data-y="198.1" data-date="20 Feb 2026" data-val="161.6"/>
+<rect x="529" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="532.9" data-y="197.7" data-date="23 Feb 2026" data-val="162.0"/>
+<rect x="537" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="540.3" data-y="196.3" data-date="24 Feb 2026" data-val="163.1"/>
+<rect x="544" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="547.6" data-y="194.8" data-date="25 Feb 2026" data-val="164.4"/>
+<rect x="551" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="555.0" data-y="194.1" data-date="26 Feb 2026" data-val="165.0"/>
+<rect x="559" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="562.4" data-y="193.6" data-date="27 Feb 2026" data-val="165.4"/>
+<rect x="566" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="569.7" data-y="193.2" data-date="02 Mar 2026" data-val="165.7"/>
+<rect x="573" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="577.1" data-y="192.9" data-date="03 Mar 2026" data-val="166.0"/>
+<rect x="581" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="584.4" data-y="188.9" data-date="04 Mar 2026" data-val="169.3"/>
+<rect x="588" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="591.8" data-y="183.7" data-date="05 Mar 2026" data-val="173.7"/>
+<rect x="595" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="599.1" data-y="169.4" data-date="06 Mar 2026" data-val="185.6"/>
+<rect x="603" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="606.5" data-y="153.4" data-date="09 Mar 2026" data-val="199.0"/>
+<rect x="610" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="613.8" data-y="128.0" data-date="10 Mar 2026" data-val="220.2"/>
+<rect x="618" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="621.2" data-y="119.0" data-date="11 Mar 2026" data-val="227.7"/>
+<rect x="625" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="628.5" data-y="100.3" data-date="12 Mar 2026" data-val="243.3"/>
+<rect x="632" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="635.9" data-y="93.4" data-date="13 Mar 2026" data-val="249.1"/>
+<rect x="640" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="643.2" data-y="80.5" data-date="16 Mar 2026" data-val="259.9"/>
+<rect x="647" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="650.6" data-y="72.9" data-date="17 Mar 2026" data-val="266.2"/>
+<rect x="654" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="657.9" data-y="66.3" data-date="18 Mar 2026" data-val="271.7"/>
+<rect x="662" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="665.3" data-y="58.9" data-date="19 Mar 2026" data-val="277.9"/>
+<rect x="669" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="672.6" data-y="53.5" data-date="20 Mar 2026" data-val="282.4"/>
+<rect x="676" y="20" width="7" height="200" fill="transparent" class="hover-target" data-x="680.0" data-y="37.7" data-date="24 Mar 2026" data-val="295.6"/>
+
+      <circle class="hoverDot" cx="0" cy="0" r="4" fill="#1C1F26" stroke="#fff"
+              stroke-width="2" style="display:none"/>
+      <line class="hoverLine" x1="0" y1="20" x2="0" y2="220"
+            stroke="#1C1F26" stroke-width="1" stroke-dasharray="3,3" style="display:none"/>
+      <defs>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#C17F4E" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#C17F4E" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <p style="font-size:11px;color:#999;margin-top:8px">
+      Solid line = actual TGP. Dashed blue = model equilibrium at today's inputs.
+    </p>
+  </div>
+
+  <!-- Decomposition + Current inputs -->
+  <div class="two-col">
+    <div class="card">
+      <h2>What is Driving the Price</h2>
+      <svg viewBox="0 0 500 70" style="width:100%;max-width:500px;height:auto">
+      <rect x="0.0" y="10" width="164.6" height="30" fill="#C17F4E" rx="2"/>
+<text x="82.3" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">97</text>
+<rect x="164.6" y="10" width="118.2" height="30" fill="#3B82F6" rx="2"/>
+<text x="223.7" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">70</text>
+<rect x="282.8" y="10" width="91.7" height="30" fill="#6B7280" rx="2"/>
+<text x="328.6" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">54</text>
+<rect x="374.5" y="10" width="12.3" height="30" fill="#D1D5DB" rx="2"/>
+<rect x="386.8" y="10" width="113.2" height="30" fill="#EF4444" rx="2"/>
+<text x="443.4" y="26.0" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="600" fill="#fff">67</text>
+
+      <rect x="0.0" y="56" width="10" height="10" fill="#C17F4E" rx="2"/>
+<text x="14.0" y="65" font-size="10" fill="#666">Crude (AUD)</text>
+<rect x="164.6" y="56" width="10" height="10" fill="#3B82F6" rx="2"/>
+<text x="178.6" y="65" font-size="10" fill="#666">Refining</text>
+<rect x="282.8" y="56" width="10" height="10" fill="#6B7280" rx="2"/>
+<text x="296.8" y="65" font-size="10" fill="#666">Excise</text>
+<rect x="374.5" y="56" width="10" height="10" fill="#D1D5DB" rx="2"/>
+<text x="388.5" y="65" font-size="10" fill="#666">Base</text>
+<rect x="386.8" y="56" width="10" height="10" fill="#EF4444" rx="2"/>
+<text x="400.8" y="65" font-size="10" fill="#666">Overshoot</text>
+
+    </svg>
+      <div style="margin-top:16px">
+        <div class="stat-row">
+          <span class="stat-label">Crude oil (AUD)</span>
+          <span class="stat-value">97 cpl</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Refining margin</span>
+          <span class="stat-value">70 cpl</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Excise</span>
+          <span class="stat-value">54 cpl</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Base costs</span>
+          <span class="stat-value">7 cpl</span>
+        </div>
+        <div class="stat-row" style="border-bottom:2px solid #1C1F26">
+          <span class="stat-label" style="font-weight:600">Overshoot / lag</span>
+          <span class="stat-value" style="color:#EF4444">+67 cpl</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Market Inputs</h2>
+      <div class="stat-row">
+        <span class="stat-label">WTI Crude</span>
+        <span class="stat-value">$90.61 USD/bbl</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">AUD/USD</span>
+        <span class="stat-value">0.6995</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">WTI in AUD</span>
+        <span class="stat-value">81.5 cpl</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Diesel crack spread</span>
+        <span class="stat-value">69.6 cpl (AUD)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Fuel excise</span>
+        <span class="stat-value">52.3 cpl</span>
+      </div>
+      <div style="margin-top:16px">
+        <h3>Pass-Through Asymmetry</h3>
+        <div style="display:flex;gap:16px">
+          <div class="asym-stat" style="flex:1;background:#FEF2F2;border-radius:8px">
+            <div class="asym-number" style="color:#EF4444">1</div>
+            <div class="asym-label">Weeks for rises</div>
+          </div>
+          <div class="asym-stat" style="flex:1;background:#EFF6FF;border-radius:8px">
+            <div class="asym-number" style="color:#3B82F6">5</div>
+            <div class="asym-label">Weeks for falls</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Asymmetry chart -->
+  <div class="card">
+    <h2>Cumulative Pass-Through by Week</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">
+      How much of a 1 cpl crude oil change has flowed through to TGP by each week.
+      Rises (red) pass through faster than falls (blue).
+    </p>
+    
+  </div>
+
+  <!-- Scenario table -->
+  <div class="card">
+    <h2>Scenario Matrix -- Where Could TGP Go?</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">
+      Predicted diesel TGP (cpl) under different crude oil and exchange rate scenarios.
+      Current conditions marked with *.
+    </p>
+    
+    <table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;
+                  box-shadow:0 1px 3px rgba(0,0,0,.08)">
+      <thead>
+        <tr style="background:#1C1F26;color:#F5F5F3">
+          <th style="padding:8px 12px;text-align:left">WTI / AUD</th>
+          <th style="padding:8px;text-align:center;">0.56</th><th style="padding:8px;text-align:center;">0.60</th><th style="padding:8px;text-align:center;">0.64</th><th style="padding:8px;text-align:center;font-weight:700;">0.68 *</th><th style="padding:8px;text-align:center;font-weight:700;">0.72 *</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$65</td><td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">188</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">180</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">172</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">166</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">160</td>
+</tr>
+<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$75</td><td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">202</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">192</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">184</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">177</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">170</td>
+</tr>
+<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap' style="font-weight:700">$85 *</td><td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">215</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">205</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">196</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">188</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">181</td>
+</tr>
+<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap' style="font-weight:700">$95 *</td><td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">228</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">217</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">208</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">199</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500" style="outline:3px solid #1C1F26;outline-offset:-3px;font-weight:700">191</td>
+</tr>
+<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$101</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">236</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">225</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">215</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">206</td>
+<td style="background:rgb(76,175,80);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">198</td>
+</tr>
+<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$110</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">249</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">236</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">225</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">216</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">207</td>
+</tr>
+<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$120</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">262</td>
+<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">249</td>
+<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">237</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">227</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">217</td>
+</tr>
+<tr><td style='padding:8px 12px;font-weight:600;white-space:nowrap'>$130</td><td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">275</td>
+<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">261</td>
+<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">249</td>
+<td style="background:rgb(229,115,115);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">238</td>
+<td style="background:rgb(255,183,77);color:#fff;text-align:center;padding:10px 8px;font-size:14px;font-weight:500">228</td>
+</tr>
+
+      </tbody>
+    </table>
+    <p style="font-size:11px;color:#999;margin-top:8px">
+      * = closest to current conditions. Crack spread held at $35/bbl.
+      Values are predicted diesel TGP in cpl (inc GST).
+    </p>
+    
+  </div>
+
+  <footer>
+    Data: AIP Terminal Gate Prices, yfinance (WTI, AUD/USD, Heating Oil futures).
+    Model: OLS multi-factor regression (R-sq 96.8%).
+    Updated daily at ~11am AEST.
+  </footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.trendChart').forEach(function(svg) {
+  var card = svg.closest('.card');
+  if (!card) return;
+  var tooltip = card.querySelector('.chart-tooltip');
+  var dot = svg.querySelector('.hoverDot');
+  var vline = svg.querySelector('.hoverLine');
+  if (!tooltip || !dot || !vline) return;
+  svg.querySelectorAll('.hover-target').forEach(function(rect) {
+    rect.onmouseenter = function() {
+      var x = this.getAttribute('data-x');
+      var y = this.getAttribute('data-y');
+      var dt = this.getAttribute('data-date');
+      var val = this.getAttribute('data-val');
+      dot.setAttribute('cx', x);
+      dot.setAttribute('cy', y);
+      dot.style.display = '';
+      vline.setAttribute('x1', x);
+      vline.setAttribute('x2', x);
+      vline.style.display = '';
+      tooltip.innerHTML = '<strong>' + dt + '</strong><br>TGP: ' + val + ' cpl';
+      tooltip.style.display = 'block';
+      var svgRect = svg.getBoundingClientRect();
+      var cardRect = card.getBoundingClientRect();
+      var vb = svg.viewBox.baseVal;
+      var pxX = (x / vb.width) * svgRect.width;
+      var pxY = (y / vb.height) * svgRect.height;
+      var tipLeft = pxX + (svgRect.left - cardRect.left) + 12;
+      var tipTop = pxY + (svgRect.top - cardRect.top) - 20;
+      if (tipLeft + 160 > cardRect.width) tipLeft = pxX + (svgRect.left - cardRect.left) - 160;
+      tooltip.style.left = tipLeft + 'px';
+      tooltip.style.top = tipTop + 'px';
+    };
+    rect.onmouseleave = function() {
+      dot.style.display = 'none';
+      vline.style.display = 'none';
+      tooltip.style.display = 'none';
+    };
+  });
+});
+</script>
+
+</body>
+</html>

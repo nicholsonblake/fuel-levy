@@ -43,6 +43,9 @@ jobs:
       - name: Run TGP forecast model
         run: python tgp_forecast.py
 
+      - name: Generate forecast dashboard
+        run: python forecast_report.py
+
       # --- Commit and deploy ---
       - name: Commit updated data
         run: |
