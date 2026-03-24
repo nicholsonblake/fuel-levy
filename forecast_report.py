@@ -661,7 +661,7 @@ def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_
     # Current state
     parts.append(f"Diesel TGP at {actual:.0f} cpl (${actual/100:.2f}/L)")
 
-    # Tomorrow — sticky, won't move much
+    # Pass-through speed context
     if residual > 20:
         fall_weeks = asym.get("weeks_90pct_fall", 5)
         parts.append(f"prices are sticky on the way down (falls take ~{fall_weeks} weeks to flow through)")
@@ -824,21 +824,7 @@ def generate_html(data):
         daily_model_std = model_rmse / (5 ** 0.5)
         daily_std = max(daily_std, daily_model_std)
 
-    ci_half_1d = 1.645 * daily_std  # 90% CI for 1 day
-
     if not history.empty and len(history) >= 3:
-        # Tomorrow: use recent daily momentum (avg of last 3 daily changes)
-        recent_deltas = history["diesel_tgp"].diff().dropna().iloc[-3:]
-        avg_daily_move = recent_deltas.mean()
-        tomorrow_est = actual + avg_daily_move
-
-        # Clamp: tomorrow can't move more than the biggest recent daily change
-        max_move = recent_deltas.abs().max()
-        tomorrow_est = max(actual - max_move, min(actual + max_move, tomorrow_est))
-
-        tomorrow_lo = tomorrow_est - ci_half_1d
-        tomorrow_hi = tomorrow_est + ci_half_1d
-
         # Week ahead and 8-week from trajectory
         week1_est = trajectory[1]["projected_tgp"] if trajectory and len(trajectory) >= 2 else None
         week8_est = trajectory[-1]["projected_tgp"] if trajectory and len(trajectory) >= 2 else None
@@ -846,19 +832,13 @@ def generate_html(data):
         # Weekly CI widens with sqrt(time)
         ci_half_1w = 1.645 * daily_std * (5 ** 0.5)
 
-        outlook_rows = (
-            f'<div style="display:flex;gap:6px;align-items:baseline">'
-            f'<span style="color:#64748b;width:80px;flex-shrink:0">Tomorrow</span>'
-            f'<span style="color:#1e293b;font-weight:600">~{tomorrow_est:.0f} cpl (${tomorrow_est/100:.2f}/L)</span>'
-            f'<span style="color:#94a3b8;font-size:11px">90% CI: {tomorrow_lo:.0f}&ndash;{tomorrow_hi:.0f}</span>'
-            f'</div>'
-        )
+        outlook_rows = ""
 
         if week1_est is not None:
             w1_lo = week1_est - ci_half_1w
             w1_hi = week1_est + ci_half_1w
             outlook_rows += (
-                f'<div style="display:flex;gap:6px;align-items:baseline;margin-top:4px">'
+                f'<div style="display:flex;gap:6px;align-items:baseline">'
                 f'<span style="color:#64748b;width:80px;flex-shrink:0">1 week</span>'
                 f'<span style="color:#1e293b;font-weight:600">~{week1_est:.0f} cpl (${week1_est/100:.2f}/L)</span>'
                 f'<span style="color:#94a3b8;font-size:11px">90% CI: {w1_lo:.0f}&ndash;{w1_hi:.0f}</span>'
