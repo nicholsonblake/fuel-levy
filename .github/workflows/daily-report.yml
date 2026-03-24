@@ -2,9 +2,11 @@ name: Daily Fuel Levy Report
 
 on:
   schedule:
-    # 11:00am AEST = 01:00 UTC (AEST is UTC+10)
-    # During AEDT (Oct-Apr) this fires at 12:00pm local
-    - cron: '0 1 * * 1-5'
+    # AEST = UTC+10, AEDT (Oct-Apr) = UTC+11
+    # All times below are UTC; approximate AEST shown in comments
+    - cron: '30 22 * * 0-4'  #  8:30am AEST (captures overnight US market close)
+    - cron: '30 23 * * 0-4'  #  9:30am AEST (after AIP publishes new TGP)
+    - cron: '0 7 * * 1-5'    #  5:00pm AEST (end of Aus business day)
   push:
     branches: [master]
     paths-ignore: ['history/**', 'data/**', 'forecast/**']
