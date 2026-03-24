@@ -764,17 +764,42 @@ def generate_html(data):
     accuracy_data = load_prediction_accuracy()
     accuracy_html = accuracy_card(accuracy_data)
 
-    # Next-day TGP estimate from trajectory
+    # Next-day TGP estimate from trajectory with 90% confidence band
     next_day_html = ""
     if trajectory and len(trajectory) >= 2:
         # Week 0 = now, Week 1 = next week; interpolate for tomorrow
         w0 = trajectory[0]["projected_tgp"]
         w1 = trajectory[1]["projected_tgp"]
         next_day_est = w0 + (w1 - w0) / 5  # ~1 trading day step
+
+        # 90% confidence band from daily TGP volatility
+        # Use rolling 30-day std of daily changes as the most responsive measure
+        ci_half = 10.0  # default fallback
+        if not history.empty and len(history) >= 10:
+            daily_changes = history["diesel_tgp"].diff().dropna()
+            if len(daily_changes) >= 10:
+                # Use last 30 changes (or all if fewer) for recent volatility
+                recent_changes = daily_changes.iloc[-30:]
+                daily_std = recent_changes.std()
+                ci_half = 1.645 * daily_std  # 90% CI (z=1.645)
+
+        # Also incorporate model RMSE if available (weekly model, scale to daily)
+        model_rmse = model.get("rmse", 0)
+        if model_rmse > 0:
+            # RMSE is weekly; daily ≈ rmse / sqrt(5)
+            daily_model_err = model_rmse / (5 ** 0.5)
+            # Take the larger of empirical volatility and model error
+            ci_half = max(ci_half, 1.645 * daily_model_err)
+
+        ci_low = next_day_est - ci_half
+        ci_high = next_day_est + ci_half
+
         next_day_html = (
-            f'<div style="font-size:12px;color:#94a3b8;margin-top:4px">'
-            f'Next trading day estimate: <strong style="color:#1e293b">{next_day_est:.0f} cpl '
-            f'(${next_day_est/100:.2f}/L)</strong></div>'
+            f'<div style="font-size:12px;margin-top:6px;padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">'
+            f'<div style="color:#1e293b;font-weight:600">Next trading day: {next_day_est:.0f} cpl (${next_day_est/100:.2f}/L)</div>'
+            f'<div style="color:#64748b;margin-top:2px">90% confidence: <strong>{ci_low:.0f} &ndash; {ci_high:.0f} cpl</strong> '
+            f'(${ci_low/100:.2f} &ndash; ${ci_high/100:.2f}/L)</div>'
+            f'</div>'
         )
 
     html = f"""<!DOCTYPE html>

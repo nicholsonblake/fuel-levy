@@ -761,6 +761,7 @@ def save_latest_json(
         "model": {
             "r_squared": round(full_model.rsquared, 4),
             "r_squared_adj": round(full_model.rsquared_adj, 4),
+            "rmse": round(float(np.sqrt(full_model.mse_resid)), 2),
             "coefficients": {
                 k: round(v, 6) for k, v in full_model.params.to_dict().items()
             },
