@@ -2,8 +2,9 @@ name: Daily Fuel Levy Report
 
 on:
   schedule:
-    # 12:00 midday AEDT = 01:00 UTC (AEDT is UTC+11)
-    - cron: '0 1 * * *'
+    # 11:00am AEST = 01:00 UTC (AEST is UTC+10)
+    # During AEDT (Oct-Apr) this fires at 12:00pm local
+    - cron: '0 1 * * 1-5'
   workflow_dispatch: # allow manual trigger
 
 permissions:
@@ -26,20 +27,29 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install openpyxl
+        run: pip install -r requirements.txt
 
+      # --- Fuel Levy Report (existing) ---
       - name: Backfill history
         run: python fuel_levy.py backfill
 
       - name: Generate HTML report
         run: python fuel_levy.py report --no-open
 
-      - name: Commit updated history
+      # --- TGP Forecast Model (new) ---
+      - name: Update TGP history from AIP
+        run: python update_tgp_history.py
+
+      - name: Run TGP forecast model
+        run: python tgp_forecast.py
+
+      # --- Commit and deploy ---
+      - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add history/ reports/
-          git diff --cached --quiet || git commit -m "chore: update fuel levy report $(date -u +%Y-%m-%d)"
+          git add history/ reports/ data/ forecast/
+          git diff --cached --quiet || git commit -m "chore: daily update $(date -u +%Y-%m-%d)"
           git push
 
       - name: Setup Pages

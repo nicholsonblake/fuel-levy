@@ -1,0 +1,37 @@
+{
+  "run_date": "2026-03-24",
+  "conditions": {
+    "date": "2026-03-24",
+    "wti_usd": 90.66000366210938,
+    "audusd": 0.6999468207359314,
+    "wti_aud_cpl": 81.46837851079651,
+    "diesel_crack_aud_cpl": 69.7932189576378,
+    "excise": 52.3,
+    "diesel_tgp_actual": 295.63
+  },
+  "decomposition": {
+    "intercept": 7.3,
+    "crude_oil_aud": 97.28,
+    "refining_margin": 70.11,
+    "excise": 54.23,
+    "predicted_total": 228.93,
+    "actual_total": 295.63,
+    "residual": 66.7
+  },
+  "model": {
+    "r_squared": 0.9678,
+    "r_squared_adj": 0.9676,
+    "coefficients": {
+      "const": 7.304538,
+      "WTI_AUD_CPL_lag1": 1.194119,
+      "diesel_crack_aud_cpl_lag1": 1.004568,
+      "excise_lag1": 1.036882
+    }
+  },
+  "asymmetry": {
+    "weeks_90pct_rise": 1,
+    "weeks_90pct_fall": 5,
+    "total_up_passthrough": 2.0539,
+    "total_down_passthrough": 1.6329
+  }
+}

@@ -1,1 +1,5 @@
 openpyxl
+yfinance
+statsmodels
+pandas
+numpy

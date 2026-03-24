@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 reports/fuel-levy-*.html
 history.csv
+.env
