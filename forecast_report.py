@@ -231,6 +231,252 @@ def scenario_table(forecasts_path, conditions):
     </p>"""
 
 
+def barrel_chart(wti_history, tgp_history, w=800, h=320):
+    """
+    Dual-axis chart: WTI USD/bbl (left, teal) vs Diesel TGP cpl (right, orange).
+    Shows how barrel price leads TGP with a visible lag.
+    """
+    if not wti_history:
+        return ""
+
+    # Parse WTI data
+    wti_dates = [d["date"] for d in wti_history]
+    wti_vals = [d["wti_usd"] for d in wti_history]
+
+    # Get TGP data for the same period
+    tgp_vals = tgp_history["diesel_tgp"].dropna().values if not tgp_history.empty else []
+    tgp_dates = [str(d.date()) for d in tgp_history.index] if not tgp_history.empty else []
+
+    if len(wti_vals) < 2:
+        return ""
+
+    n_wti = len(wti_vals)
+    n_tgp = len(tgp_vals)
+
+    # Y-axis ranges
+    wti_min = min(wti_vals) * 0.92
+    wti_max = max(wti_vals) * 1.06
+    wti_range = wti_max - wti_min or 1
+
+    tgp_min = (min(tgp_vals) * 0.92) if n_tgp > 0 else 100
+    tgp_max = (max(tgp_vals) * 1.06) if n_tgp > 0 else 300
+    tgp_range = tgp_max - tgp_min or 1
+
+    pl, pr, pt, pb = 64, 64, 28, 44
+    cw = w - pl - pr
+    ch = h - pt - pb
+
+    def xp_wti(i):
+        return pl + (i / max(n_wti - 1, 1)) * cw
+
+    def yp_wti(v):
+        return pt + ch - ((v - wti_min) / wti_range) * ch
+
+    def xp_tgp(i):
+        return pl + (i / max(n_tgp - 1, 1)) * cw
+
+    def yp_tgp(v):
+        return pt + ch - ((v - tgp_min) / tgp_range) * ch
+
+    # WTI bezier path
+    wti_points = [(xp_wti(i), yp_wti(v)) for i, v in enumerate(wti_vals)]
+    wti_path = f"M {wti_points[0][0]:.1f},{wti_points[0][1]:.1f}"
+    for i in range(1, len(wti_points)):
+        x0, y0 = wti_points[i - 1]
+        x1, y1 = wti_points[i]
+        cpx = (x0 + x1) / 2
+        wti_path += f" C {cpx:.1f},{y0:.1f} {cpx:.1f},{y1:.1f} {x1:.1f},{y1:.1f}"
+
+    # WTI area
+    wti_area = wti_path + f" L {wti_points[-1][0]:.1f},{pt + ch:.1f} L {wti_points[0][0]:.1f},{pt + ch:.1f} Z"
+
+    # TGP bezier path
+    tgp_path_d = ""
+    if n_tgp > 1:
+        tgp_points = [(xp_tgp(i), yp_tgp(v)) for i, v in enumerate(tgp_vals)]
+        tgp_path_d = f"M {tgp_points[0][0]:.1f},{tgp_points[0][1]:.1f}"
+        for i in range(1, len(tgp_points)):
+            x0, y0 = tgp_points[i - 1]
+            x1, y1 = tgp_points[i]
+            cpx = (x0 + x1) / 2
+            tgp_path_d += f" C {cpx:.1f},{y0:.1f} {cpx:.1f},{y1:.1f} {x1:.1f},{y1:.1f}"
+
+    # Left axis gridlines (WTI)
+    grid = ""
+    n_grid = 5
+    for i in range(n_grid + 1):
+        v = wti_min + wti_range * i / n_grid
+        y = yp_wti(v)
+        grid += f'<line x1="{pl}" y1="{y:.0f}" x2="{w - pr}" y2="{y:.0f}" stroke="#f0f0f0" stroke-width="1"/>\n'
+        grid += f'<text x="{pl - 10}" y="{y:.0f}" text-anchor="end" dominant-baseline="middle" fill="#0d9488" font-size="11" font-weight="500" font-family="Inter,system-ui,sans-serif">${v:.0f}</text>\n'
+
+    # Right axis labels (TGP)
+    for i in range(n_grid + 1):
+        v = tgp_min + tgp_range * i / n_grid
+        y = yp_tgp(v)
+        grid += f'<text x="{w - pr + 10}" y="{y:.0f}" text-anchor="start" dominant-baseline="middle" fill="#f97316" font-size="11" font-weight="500" font-family="Inter,system-ui,sans-serif">{v:.0f}</text>\n'
+
+    # Date labels
+    dlabels = ""
+    step = max(n_wti // 5, 1)
+    for i in range(0, n_wti, step):
+        x = xp_wti(i)
+        # Parse date string for display
+        parts = wti_dates[i].split("-")
+        label = f"{int(parts[2])} {['', 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][int(parts[1])]}"
+        dlabels += f'<text x="{x:.0f}" y="{h - 8}" text-anchor="middle" fill="#b0b0b0" font-size="10" font-family="Inter,system-ui,sans-serif">{label}</text>\n'
+
+    # Last point highlights
+    wlx, wly = wti_points[-1]
+    wti_last = wti_vals[-1]
+    wti_highlight = f"""
+    <circle cx="{wlx:.1f}" cy="{wly:.1f}" r="5" fill="#fff" stroke="#0d9488" stroke-width="2.5"/>
+    <text x="{wlx - 10:.1f}" y="{wly - 12:.1f}" text-anchor="end" fill="#0d9488"
+          font-size="13" font-weight="700" font-family="Inter,system-ui,sans-serif">${wti_last:.1f}</text>
+    """
+
+    tgp_highlight = ""
+    if n_tgp > 1:
+        tlx, tly = tgp_points[-1]
+        tgp_last = tgp_vals[-1]
+        tgp_highlight = f"""
+        <circle cx="{tlx:.1f}" cy="{tly:.1f}" r="5" fill="#fff" stroke="#f97316" stroke-width="2.5"/>
+        <text x="{tlx + 10:.1f}" y="{tly - 12:.1f}" text-anchor="start" fill="#f97316"
+              font-size="13" font-weight="700" font-family="Inter,system-ui,sans-serif">{tgp_last:.1f}</text>
+        """
+
+    # Hover targets for WTI
+    hovers = ""
+    for i, v in enumerate(wti_vals):
+        cx = xp_wti(i)
+        cy = yp_wti(v)
+        d = wti_dates[i]
+        # Find matching TGP if available
+        tgp_v = ""
+        if d in tgp_dates:
+            idx = tgp_dates.index(d)
+            tgp_v = f" | TGP: {tgp_vals[idx]:.1f} cpl"
+        hovers += f'<rect x="{cx - cw / n_wti / 2:.0f}" y="{pt}" width="{max(cw / n_wti, 4):.0f}" height="{ch}" fill="transparent" class="ht2" data-x="{cx:.1f}" data-y="{cy:.1f}" data-d="{d}" data-v="WTI: ${v:.2f}/bbl{tgp_v}"/>\n'
+
+    # Axis labels
+    axis_labels = f"""
+    <text x="{pl - 10}" y="{pt - 10}" text-anchor="end" fill="#0d9488" font-size="10" font-weight="600" font-family="Inter,system-ui,sans-serif">USD/bbl</text>
+    <text x="{w - pr + 10}" y="{pt - 10}" text-anchor="start" fill="#f97316" font-size="10" font-weight="600" font-family="Inter,system-ui,sans-serif">cpl</text>
+    """
+
+    return f"""<svg viewBox="0 0 {w} {h}" style="width:100%;height:auto;display:block" id="barrelSvg">
+    <defs>
+      <linearGradient id="wtiGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0d9488" stop-opacity="0.12"/>
+        <stop offset="100%" stop-color="#0d9488" stop-opacity="0.01"/>
+      </linearGradient>
+    </defs>
+    {grid}
+    {axis_labels}
+    <path d="{wti_area}" fill="url(#wtiGrad)"/>
+    <path d="{wti_path}" fill="none" stroke="#0d9488" stroke-width="2.5"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    {"<path d='" + tgp_path_d + "' fill='none' stroke='#f97316' stroke-width='2' stroke-linejoin='round' stroke-linecap='round' stroke-dasharray='6,3' opacity='0.8'/>" if tgp_path_d else ""}
+    {wti_highlight}
+    {tgp_highlight}
+    {dlabels}
+    {hovers}
+    <circle class="hd2" cx="0" cy="0" r="4" fill="#1e293b" stroke="#fff" stroke-width="2" style="display:none"/>
+    <line class="hl2" x1="0" y1="{pt}" x2="0" y2="{pt + ch}" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,3" style="display:none"/>
+    </svg>"""
+
+
+def trajectory_chart(trajectory, actual_tgp, predicted_tgp, w=600, h=260):
+    """
+    Forward-looking chart showing projected TGP path over the next 8 weeks.
+    Shows current TGP, equilibrium line, and convergence path.
+    """
+    if not trajectory or len(trajectory) < 2:
+        return ""
+
+    weeks = [t["week"] for t in trajectory]
+    vals = [t["projected_tgp"] for t in trajectory]
+    n = len(vals)
+
+    all_vals = vals + [predicted_tgp, actual_tgp]
+    y_min = min(all_vals) * 0.96
+    y_max = max(all_vals) * 1.03
+    y_range = y_max - y_min or 1
+
+    pl, pr, pt, pb = 56, 24, 28, 44
+    cw = w - pl - pr
+    ch = h - pt - pb
+
+    def xp(i):
+        return pl + (i / max(n - 1, 1)) * cw
+
+    def yp(v):
+        return pt + ch - ((v - y_min) / y_range) * ch
+
+    # Gridlines
+    grid = ""
+    n_grid = 4
+    for i in range(n_grid + 1):
+        v = y_min + y_range * i / n_grid
+        y = yp(v)
+        grid += f'<line x1="{pl}" y1="{y:.0f}" x2="{w - pr}" y2="{y:.0f}" stroke="#f0f0f0" stroke-width="1"/>\n'
+        grid += f'<text x="{pl - 10}" y="{y:.0f}" text-anchor="end" dominant-baseline="middle" fill="#b0b0b0" font-size="11" font-family="Inter,system-ui,sans-serif">{v:.0f}</text>\n'
+
+    # Equilibrium line
+    eq_y = yp(predicted_tgp)
+    eq_line = f"""
+    <line x1="{pl}" y1="{eq_y:.0f}" x2="{w - pr}" y2="{eq_y:.0f}"
+          stroke="#6366f1" stroke-width="1.5" stroke-dasharray="8,6" opacity="0.5"/>
+    <text x="{w - pr + 4}" y="{eq_y + 4:.0f}" fill="#6366f1" font-size="10"
+          font-weight="600" font-family="Inter,system-ui,sans-serif">{predicted_tgp:.0f} eq</text>
+    """
+
+    # Trajectory path with area fill
+    points = [(xp(i), yp(v)) for i, v in enumerate(vals)]
+    path_d = f"M {points[0][0]:.1f},{points[0][1]:.1f}"
+    for i in range(1, len(points)):
+        x0, y0 = points[i - 1]
+        x1, y1 = points[i]
+        cpx = (x0 + x1) / 2
+        path_d += f" C {cpx:.1f},{y0:.1f} {cpx:.1f},{y1:.1f} {x1:.1f},{y1:.1f}"
+
+    area_d = path_d + f" L {points[-1][0]:.1f},{pt + ch:.1f} L {points[0][0]:.1f},{pt + ch:.1f} Z"
+
+    # Week labels
+    wlabels = ""
+    for i in range(n):
+        x = xp(i)
+        label = "Now" if i == 0 else f"W{i}"
+        wlabels += f'<text x="{x:.0f}" y="{h - 10}" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="Inter,system-ui,sans-serif">{label}</text>\n'
+
+    # Data point dots and value labels
+    dots = ""
+    for i, (px, py) in enumerate(points):
+        v = vals[i]
+        dots += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="4" fill="#fff" stroke="#f97316" stroke-width="2"/>\n'
+        # Label every other point or first/last
+        if i == 0 or i == n - 1 or i % 2 == 0:
+            anchor = "start" if i == 0 else "end" if i == n - 1 else "middle"
+            y_off = -12
+            dots += f'<text x="{px:.1f}" y="{py + y_off:.1f}" text-anchor="{anchor}" fill="#1e293b" font-size="11" font-weight="600" font-family="Inter,system-ui,sans-serif">{v:.0f}</text>\n'
+
+    return f"""<svg viewBox="0 0 {w} {h}" style="width:100%;max-width:{w}px;height:auto;display:block">
+    <defs>
+      <linearGradient id="trajGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f97316" stop-opacity="0.1"/>
+        <stop offset="100%" stop-color="#f97316" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    {grid}
+    {eq_line}
+    <path d="{area_d}" fill="url(#trajGrad)"/>
+    <path d="{path_d}" fill="none" stroke="#f97316" stroke-width="2.5"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    {dots}
+    {wlabels}
+    </svg>"""
+
+
 def asym_bars(asymmetry, w=600, h=200):
     cum_up = asymmetry.get("cum_up", [])
     cum_down = asymmetry.get("cum_down", [])
@@ -323,6 +569,28 @@ def generate_html(data):
     asym_svg = asym_bars(asym) if asym.get("cum_up") else ""
     sc_path = FORECAST_DIR / "scenarios.csv"
     sc_html = scenario_table(sc_path, cond) if sc_path.exists() else ""
+
+    # Barrel price tracking chart
+    wti_hist = data.get("wti_history", [])
+    barrel_svg = barrel_chart(wti_hist, history) if wti_hist else ""
+
+    # TGP trajectory projection
+    trajectory = data.get("trajectory", [])
+    traj_svg = trajectory_chart(trajectory, actual, predicted) if trajectory else ""
+
+    # Trajectory summary text
+    if trajectory and len(trajectory) > 1:
+        traj_end = trajectory[-1]["projected_tgp"]
+        traj_change = traj_end - actual
+        traj_weeks = trajectory[-1]["week"]
+        if traj_change < -5:
+            traj_summary = f"TGP is projected to fall ~{abs(traj_change):.0f} cpl over {traj_weeks} weeks toward equilibrium ({predicted:.0f} cpl), assuming crude and AUD/USD hold steady."
+        elif traj_change > 5:
+            traj_summary = f"TGP is projected to rise ~{traj_change:.0f} cpl over {traj_weeks} weeks as it catches up to current inputs ({predicted:.0f} cpl equilibrium)."
+        else:
+            traj_summary = f"TGP is near equilibrium and projected to remain around {actual:.0f} cpl. Direction depends on future crude and FX moves."
+    else:
+        traj_summary = ""
 
     wti_aud_cpl = cond.get("wti_aud_cpl", 0)
     coeff = model.get("coefficients", {}).get("WTI_AUD_CPL_lag1", 1.19)
@@ -532,6 +800,49 @@ def generate_html(data):
     {chart_svg}
   </div>
 
+  <!-- Barrel Price Tracking -->
+  {"" if not barrel_svg else f'''<div class="card" style="position:relative">
+    <div class="card-title">Barrel Price Tracking &mdash; WTI Crude vs Diesel TGP</div>
+    <div class="card-desc">
+      <span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px">
+        <span style="display:inline-block;width:14px;height:3px;background:#0d9488;border-radius:2px"></span>
+        <span>WTI crude (USD/bbl, left axis)</span>
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:4px">
+        <span style="display:inline-block;width:14px;height:3px;background:#f97316;border-radius:2px;border-top:1px dashed #f97316"></span>
+        <span>Diesel TGP (cpl, right axis)</span>
+      </span>
+      &mdash; notice how TGP lags barrel price movements by 1&ndash;5 weeks.
+    </div>
+    <div class="tip" id="barrelTip"></div>
+    {barrel_svg}
+  </div>'''}
+
+  <!-- TGP Trajectory Projection -->
+  {"" if not traj_svg else f'''<div class="card">
+    <div class="card-title">Where is TGP Headed?</div>
+    <div class="card-desc">{traj_summary}</div>
+    <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:300px">
+        {traj_svg}
+      </div>
+      <div style="width:200px;flex-shrink:0">
+        <div style="font-size:12px;color:#64748b;margin-bottom:12px">Projected TGP path assuming crude &amp; FX hold at current levels</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:12px;height:12px;background:#f97316;border-radius:50%"></div>
+          <span style="font-size:12px;color:#1e293b;font-weight:600">Current: {actual:.0f} cpl</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:12px;height:3px;background:#6366f1;border-radius:2px"></div>
+          <span style="font-size:12px;color:#1e293b;font-weight:600">Equilibrium: {predicted:.0f} cpl</span>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px">
+          Based on the asymmetric pass-through model: rises flow through in ~{asym.get("weeks_90pct_rise", "?")} week(s), falls in ~{asym.get("weeks_90pct_fall", "?")} weeks.
+        </div>
+      </div>
+    </div>
+  </div>'''}
+
   <!-- Decomposition + Inputs -->
   <div class="two-col">
     <div class="card">
@@ -623,6 +934,37 @@ def generate_html(data):
       var px=(x/vb.width)*sr.width,py=(y/vb.height)*sr.height;
       var l=px+(sr.left-cr.left)+14,t=py+(sr.top-cr.top)-24;
       if(l+140>cr.width)l=px+(sr.left-cr.left)-140;
+      tip.style.left=l+'px';tip.style.top=t+'px';
+    }};
+    r.onmouseleave=function(){{
+      dot.style.display='none';vl.style.display='none';tip.style.display='none';
+    }};
+  }});
+}})();
+
+// Barrel chart hover
+(function(){{
+  var cards=document.querySelectorAll('.card[style*="relative"]');
+  if(cards.length<2)return;
+  var card=cards[1];
+  var svg=document.getElementById('barrelSvg');
+  var tip=document.getElementById('barrelTip');
+  if(!svg||!tip)return;
+  var dot=svg.querySelector('.hd2');
+  var vl=svg.querySelector('.hl2');
+  if(!dot||!vl)return;
+  svg.querySelectorAll('.ht2').forEach(function(r){{
+    r.onmouseenter=function(){{
+      var x=this.getAttribute('data-x'),y=this.getAttribute('data-y');
+      dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.style.display='';
+      vl.setAttribute('x1',x);vl.setAttribute('x2',x);vl.style.display='';
+      tip.innerHTML='<strong>'+this.getAttribute('data-d')+'</strong><br>'+this.getAttribute('data-v');
+      tip.style.display='block';
+      var sr=svg.getBoundingClientRect(),cr=card.getBoundingClientRect();
+      var vb=svg.viewBox.baseVal;
+      var px=(x/vb.width)*sr.width,py=(y/vb.height)*sr.height;
+      var l=px+(sr.left-cr.left)+14,t=py+(sr.top-cr.top)-24;
+      if(l+180>cr.width)l=px+(sr.left-cr.left)-180;
       tip.style.left=l+'px';tip.style.top=t+'px';
     }};
     r.onmouseleave=function(){{
