@@ -661,18 +661,22 @@ def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_
     # Current state
     parts.append(f"Diesel TGP at {actual:.0f} cpl (${actual/100:.2f}/L)")
 
-    # Overshoot/gap
-    if abs(residual) > 10:
-        parts.append(f"{'above' if residual > 0 else 'below'} model equilibrium by {abs(residual):.0f} cpl")
+    # Tomorrow — sticky, won't move much
+    if residual > 20:
+        fall_weeks = asym.get("weeks_90pct_fall", 5)
+        parts.append(f"prices are sticky on the way down (falls take ~{fall_weeks} weeks to flow through)")
+    elif residual < -20:
+        rise_weeks = asym.get("weeks_90pct_rise", 1)
+        parts.append(f"expect prices to catch up quickly (~{rise_weeks} week)")
 
-    # Direction
+    # Medium-term direction
     if trajectory and len(trajectory) > 1:
         end_tgp = trajectory[-1]["projected_tgp"]
         weeks = trajectory[-1]["week"]
         if residual > 20:
-            parts.append(f"expected to ease toward {end_tgp:.0f} cpl over {weeks} weeks")
+            parts.append(f"projected to ease toward {end_tgp:.0f} cpl over {weeks} weeks")
         elif residual < -20:
-            parts.append(f"expected to rise toward {end_tgp:.0f} cpl over {weeks} weeks")
+            parts.append(f"projected to rise toward {end_tgp:.0f} cpl over {weeks} weeks")
 
     # WTI context
     parts.append(f"WTI crude at ${wti_usd:.0f}/bbl")
@@ -800,41 +804,94 @@ def generate_html(data):
     accuracy_data = load_prediction_accuracy()
     accuracy_html = accuracy_card(accuracy_data)
 
-    # Next-day TGP estimate from trajectory with 90% confidence band
+    # Short-term outlook: tomorrow (momentum-based), 1-week, 8-week (trajectory)
+    # TGP is sticky day-to-day — tomorrow's price is driven by recent momentum,
+    # NOT the weekly trajectory. The trajectory shows where TGP is headed over weeks
+    # as the asymmetric lag unwinds.
     next_day_html = ""
-    if trajectory and len(trajectory) >= 2:
-        # Week 0 = now, Week 1 = next week; interpolate for tomorrow
-        w0 = trajectory[0]["projected_tgp"]
-        w1 = trajectory[1]["projected_tgp"]
-        next_day_est = w0 + (w1 - w0) / 5  # ~1 trading day step
 
-        # 90% confidence band from daily TGP volatility
-        # Use rolling 30-day std of daily changes as the most responsive measure
-        ci_half = 10.0  # default fallback
-        if not history.empty and len(history) >= 10:
-            daily_changes = history["diesel_tgp"].diff().dropna()
-            if len(daily_changes) >= 10:
-                # Use last 30 changes (or all if fewer) for recent volatility
-                recent_changes = daily_changes.iloc[-30:]
-                daily_std = recent_changes.std()
-                ci_half = 1.645 * daily_std  # 90% CI (z=1.645)
+    # Daily volatility for 90% CI
+    daily_std = 5.0  # fallback
+    if not history.empty and len(history) >= 10:
+        daily_changes = history["diesel_tgp"].diff().dropna()
+        if len(daily_changes) >= 10:
+            recent_changes = daily_changes.iloc[-30:]
+            daily_std = recent_changes.std()
 
-        # Also incorporate model RMSE if available (weekly model, scale to daily)
-        model_rmse = model.get("rmse", 0)
-        if model_rmse > 0:
-            # RMSE is weekly; daily ≈ rmse / sqrt(5)
-            daily_model_err = model_rmse / (5 ** 0.5)
-            # Take the larger of empirical volatility and model error
-            ci_half = max(ci_half, 1.645 * daily_model_err)
+    # Also factor in model RMSE (weekly, scaled to daily) as a floor
+    model_rmse = model.get("rmse", 0)
+    if model_rmse > 0:
+        daily_model_std = model_rmse / (5 ** 0.5)
+        daily_std = max(daily_std, daily_model_std)
 
-        ci_low = next_day_est - ci_half
-        ci_high = next_day_est + ci_half
+    ci_half_1d = 1.645 * daily_std  # 90% CI for 1 day
+
+    if not history.empty and len(history) >= 3:
+        # Tomorrow: use recent daily momentum (avg of last 3 daily changes)
+        recent_deltas = history["diesel_tgp"].diff().dropna().iloc[-3:]
+        avg_daily_move = recent_deltas.mean()
+        tomorrow_est = actual + avg_daily_move
+
+        # Clamp: tomorrow can't move more than the biggest recent daily change
+        max_move = recent_deltas.abs().max()
+        tomorrow_est = max(actual - max_move, min(actual + max_move, tomorrow_est))
+
+        tomorrow_lo = tomorrow_est - ci_half_1d
+        tomorrow_hi = tomorrow_est + ci_half_1d
+
+        # Week ahead and 8-week from trajectory
+        week1_est = trajectory[1]["projected_tgp"] if trajectory and len(trajectory) >= 2 else None
+        week8_est = trajectory[-1]["projected_tgp"] if trajectory and len(trajectory) >= 2 else None
+
+        # Weekly CI widens with sqrt(time)
+        ci_half_1w = 1.645 * daily_std * (5 ** 0.5)
+
+        outlook_rows = (
+            f'<div style="display:flex;gap:6px;align-items:baseline">'
+            f'<span style="color:#64748b;width:80px;flex-shrink:0">Tomorrow</span>'
+            f'<span style="color:#1e293b;font-weight:600">~{tomorrow_est:.0f} cpl (${tomorrow_est/100:.2f}/L)</span>'
+            f'<span style="color:#94a3b8;font-size:11px">90% CI: {tomorrow_lo:.0f}&ndash;{tomorrow_hi:.0f}</span>'
+            f'</div>'
+        )
+
+        if week1_est is not None:
+            w1_lo = week1_est - ci_half_1w
+            w1_hi = week1_est + ci_half_1w
+            outlook_rows += (
+                f'<div style="display:flex;gap:6px;align-items:baseline;margin-top:4px">'
+                f'<span style="color:#64748b;width:80px;flex-shrink:0">1 week</span>'
+                f'<span style="color:#1e293b;font-weight:600">~{week1_est:.0f} cpl (${week1_est/100:.2f}/L)</span>'
+                f'<span style="color:#94a3b8;font-size:11px">90% CI: {w1_lo:.0f}&ndash;{w1_hi:.0f}</span>'
+                f'</div>'
+            )
+
+        if week8_est is not None:
+            ci_half_8w = 1.645 * daily_std * (40 ** 0.5)
+            w8_lo = week8_est - ci_half_8w
+            w8_hi = week8_est + ci_half_8w
+            outlook_rows += (
+                f'<div style="display:flex;gap:6px;align-items:baseline;margin-top:4px">'
+                f'<span style="color:#64748b;width:80px;flex-shrink:0">8 weeks</span>'
+                f'<span style="color:#1e293b;font-weight:600">~{week8_est:.0f} cpl (${week8_est/100:.2f}/L)</span>'
+                f'<span style="color:#94a3b8;font-size:11px">90% CI: {w8_lo:.0f}&ndash;{w8_hi:.0f}</span>'
+                f'</div>'
+            )
+
+        # Stickiness explanation
+        rise_weeks = asym.get("weeks_90pct_rise", "?")
+        fall_weeks = asym.get("weeks_90pct_fall", "?")
+        if residual > 20:
+            sticky_note = f"TGP is sticky on the way down &mdash; falls take ~{fall_weeks} weeks to pass through."
+        elif residual < -20:
+            sticky_note = f"Rises pass through fast &mdash; expect catch-up within ~{rise_weeks} week(s)."
+        else:
+            sticky_note = "TGP is near equilibrium. Direction depends on crude and FX moves."
 
         next_day_html = (
-            f'<div style="font-size:12px;margin-top:6px;padding:8px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">'
-            f'<div style="color:#1e293b;font-weight:600">Next trading day: {next_day_est:.0f} cpl (${next_day_est/100:.2f}/L)</div>'
-            f'<div style="color:#64748b;margin-top:2px">90% confidence: <strong>{ci_low:.0f} &ndash; {ci_high:.0f} cpl</strong> '
-            f'(${ci_low/100:.2f} &ndash; ${ci_high/100:.2f}/L)</div>'
+            f'<div style="font-size:12px;margin-top:6px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">'
+            f'<div style="font-weight:600;color:#1e293b;margin-bottom:6px">Price Outlook</div>'
+            f'{outlook_rows}'
+            f'<div style="color:#94a3b8;font-size:11px;margin-top:8px;font-style:italic">{sticky_note}</div>'
             f'</div>'
         )
 
