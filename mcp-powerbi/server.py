@@ -22,8 +22,9 @@ mcp = FastMCP(
     "powerbi",
     instructions=(
         "You have access to Power BI. Use list_workspaces to find workspaces, "
-        "list_reports / list_datasets to browse content, get_tables to see what "
-        "data is available, then run_dax_query to answer questions with data."
+        "list_reports / list_datasets to browse content, get_dataset_schema to "
+        "see tables/columns/measures, then run_dax_query to answer data questions. "
+        "Always use TOPN or filters in DAX — results are capped at 100k rows."
     ),
 )
 
@@ -125,25 +126,49 @@ async def list_datasets(workspace_id: str) -> str:
 
 
 @mcp.tool()
-async def get_tables(workspace_id: str, dataset_id: str) -> str:
-    """Get all tables and their columns in a dataset. Use this to understand
-    what data is available before writing a DAX query.
+async def get_dataset_schema(workspace_id: str, dataset_id: str) -> str:
+    """Get all tables, columns, and measures in a dataset. Use this to
+    understand the data model before writing a DAX query.
 
     Args:
         workspace_id: The workspace/group ID.
         dataset_id: The dataset ID (get from list_datasets or list_reports).
     """
-    data = await _pbi_get(
-        f"groups/{workspace_id}/datasets/{dataset_id}/tables"
+    path = f"groups/{workspace_id}/datasets/{dataset_id}/executeQueries"
+    query_body = lambda dax: {
+        "queries": [{"query": dax}],
+        "serializerSettings": {"includeNulls": True},
+    }
+
+    # Run all three metadata queries concurrently
+    import asyncio
+
+    tables_resp, cols_resp, measures_resp = await asyncio.gather(
+        _pbi_post(path, query_body(
+            "EVALUATE SELECTCOLUMNS(INFO.TABLES(), "
+            "\"Table\", [Name], \"Hidden\", [IsHidden])"
+        )),
+        _pbi_post(path, query_body(
+            "EVALUATE SELECTCOLUMNS(INFO.COLUMNS(), "
+            "\"Table\", [TableName], \"Column\", [ExplicitName], "
+            "\"Type\", [DataType], \"Hidden\", [IsHidden])"
+        )),
+        _pbi_post(path, query_body(
+            "EVALUATE SELECTCOLUMNS(INFO.MEASURES(), "
+            "\"Table\", [TableName], \"Measure\", [Name], "
+            "\"Expression\", [Expression])"
+        )),
     )
-    tables = []
-    for t in data.get("value", []):
-        cols = [
-            {"name": c["name"], "dataType": c["dataType"]}
-            for c in t.get("columns", [])
-        ]
-        tables.append({"name": t["name"], "columns": cols})
-    return json.dumps(tables, indent=2)
+
+    def extract_rows(resp):
+        results = resp.get("results", [{}])
+        return results[0].get("tables", [{}])[0].get("rows", [])
+
+    return json.dumps({
+        "tables": extract_rows(tables_resp),
+        "columns": extract_rows(cols_resp),
+        "measures": extract_rows(measures_resp),
+    }, indent=2)
 
 
 @mcp.tool()
@@ -195,6 +220,32 @@ async def refresh_dataset(workspace_id: str, dataset_id: str) -> str:
         )
         resp.raise_for_status()
     return "Dataset refresh triggered successfully."
+
+
+@mcp.tool()
+async def get_refresh_status(
+    workspace_id: str, dataset_id: str, top: int = 3
+) -> str:
+    """Check recent refresh history for a dataset.
+
+    Args:
+        workspace_id: The workspace/group ID.
+        dataset_id: The dataset ID.
+        top: Number of recent refreshes to return (default 3).
+    """
+    data = await _pbi_get(
+        f"groups/{workspace_id}/datasets/{dataset_id}/refreshes?$top={top}"
+    )
+    refreshes = [
+        {
+            "status": r.get("status"),
+            "startTime": r.get("startTime"),
+            "endTime": r.get("endTime"),
+            "refreshType": r.get("refreshType"),
+        }
+        for r in data.get("value", [])
+    ]
+    return json.dumps(refreshes, indent=2)
 
 
 # ── Run ──────────────────────────────────────────────────────────────────────
