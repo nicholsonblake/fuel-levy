@@ -32,23 +32,23 @@
 
 --- CURRENT CONDITIONS ---
 
-  WTI Crude:       $93.27 USD/bbl
-  AUD/USD:         0.6893
+  WTI Crude:       $93.16 USD/bbl
+  AUD/USD:         0.6887
   WTI in AUD:      85.1 cpl
-  Diesel crack:    69.8 cpl (AUD)
+  Diesel crack:    70.0 cpl (AUD)
   Excise:          52.3 cpl
   Actual TGP:      309.7 cpl
 
 --- TGP DECOMPOSITION (what is driving each cent) ---
 
   Crude oil (AUD):        101.1 cpl
-  Refining margin:         71.1 cpl
+  Refining margin:         71.3 cpl
   Excise (model):          54.6 cpl
   Intercept (base):         7.0 cpl
   ---
-  Model prediction:       233.8 cpl
+  Model prediction:       234.0 cpl
   Actual TGP:             309.7 cpl
-  Residual:                75.9 cpl
+  Residual:                75.7 cpl
 
 --- ASYMMETRIC PASS-THROUGH (rockets and feathers) ---
 
