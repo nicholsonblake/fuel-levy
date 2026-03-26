@@ -32,29 +32,29 @@
 
 --- CURRENT CONDITIONS ---
 
-  WTI Crude:       $93.12 USD/bbl
-  AUD/USD:         0.6938
-  WTI in AUD:      84.4 cpl
-  Diesel crack:    65.7 cpl (AUD)
+  WTI Crude:       $93.27 USD/bbl
+  AUD/USD:         0.6893
+  WTI in AUD:      85.1 cpl
+  Diesel crack:    69.8 cpl (AUD)
   Excise:          52.3 cpl
   Actual TGP:      309.7 cpl
 
 --- TGP DECOMPOSITION (what is driving each cent) ---
 
-  Crude oil (AUD):        100.3 cpl
-  Refining margin:         66.9 cpl
+  Crude oil (AUD):        101.1 cpl
+  Refining margin:         71.1 cpl
   Excise (model):          54.6 cpl
   Intercept (base):         7.0 cpl
   ---
-  Model prediction:       228.8 cpl
+  Model prediction:       233.8 cpl
   Actual TGP:             309.7 cpl
-  Residual:                80.9 cpl
+  Residual:                75.9 cpl
 
 --- ASYMMETRIC PASS-THROUGH (rockets and feathers) ---
 
-  R-squared of asymmetric model: 0.5494
+  R-squared of asymmetric model: 0.5500
   Total up pass-through:   2.18 cpl per 1 cpl crude rise
-  Total down pass-through: 1.67 cpl per 1 cpl crude fall
+  Total down pass-through: 1.68 cpl per 1 cpl crude fall
   Weeks to 90% pass-through (RISE):  1
   Weeks to 90% pass-through (FALL):  6
 
@@ -70,19 +70,19 @@
     Week 8:   2.18 cpl  ##########
 
   Cumulative response to 1 cpl crude DECREASE:
-    Week 0:   0.30 cpl  #
+    Week 0:   0.31 cpl  #
     Week 1:   0.73 cpl  ###
-    Week 2:   0.99 cpl  ####
-    Week 3:   1.10 cpl  #####
-    Week 4:   1.29 cpl  ######
+    Week 2:   1.00 cpl  #####
+    Week 3:   1.11 cpl  #####
+    Week 4:   1.30 cpl  ######
     Week 5:   1.49 cpl  #######
     Week 6:   1.56 cpl  #######
     Week 7:   1.69 cpl  ########
-    Week 8:   1.67 cpl  ########
+    Week 8:   1.68 cpl  ########
 
 --- SCENARIO FORECASTS (Diesel TGP, cpl) ---
 
-  Using crack spread = $35/bbl (current conditions: ~$66 AUD/bbl equiv)
+  Using crack spread = $35/bbl (current conditions: ~$70 AUD/bbl equiv)
 
    WTI USD  AUD 0.56  AUD 0.60  AUD 0.64  AUD 0.68  AUD 0.72
   ----------------------------------------------------------
@@ -97,7 +97,7 @@
 
 --- DIRECTIONAL OUTLOOK ---
 
-  TGP is ABOVE model equilibrium by 81 cpl.
+  TGP is ABOVE model equilibrium by 76 cpl.
   This suggests TGP has overshot OR the model is missing a factor
   (e.g. acute supply disruption premium, further AUD weakness).
   If crude and FX stabilise, expect TGP to DRIFT DOWN over 4-8 weeks.
