@@ -992,36 +992,40 @@ def compute_tgp_trajectory(
     Project where TGP is likely headed over the next N weeks,
     assuming crude and FX stay at current levels.
 
-    Uses the ECM error-correction coefficient to model convergence.
-    The EC coefficient tells us what fraction of the gap is closed
-    each week — this is the econometrically proper adjustment speed,
-    replacing the previous ad hoc impulse-response approach.
-
-    Fallback: if no ECM coefficient available, uses a simple
-    geometric decay based on asymmetric pass-through estimates.
+    Each trajectory point includes 90% confidence bounds that widen
+    with sqrt(weeks), reflecting growing uncertainty at longer horizons.
+    The base uncertainty comes from the long-run model RMSE.
     """
     actual = conditions["diesel_tgp_actual"]
     predicted = decomposition["predicted_total"]
     gap = actual - predicted
+    rmse = decomposition.get("model_rmse", 15)
 
-    trajectory = [{"week": 0, "projected_tgp": round(actual, 1)}]
+    def _ci_bounds(point: float, week: int) -> tuple[float, float]:
+        """90% CI half-width scales with sqrt(week) from weekly RMSE."""
+        half = 1.645 * rmse * (max(week, 1) ** 0.5) / (4 ** 0.5)
+        return round(point - half, 1), round(point + half, 1)
+
+    lo, hi = _ci_bounds(actual, 0)
+    trajectory = [{"week": 0, "projected_tgp": round(actual, 1), "ci_lower": lo, "ci_upper": hi}]
 
     if abs(gap) < 1:
         for w in range(1, weeks + 1):
-            trajectory.append({"week": w, "projected_tgp": round(predicted, 1)})
+            lo, hi = _ci_bounds(predicted, w)
+            trajectory.append({"week": w, "projected_tgp": round(predicted, 1), "ci_lower": lo, "ci_upper": hi})
         return trajectory
 
     # ECM-based: each week, gap closes by |ec_speed| fraction
-    # ec_speed should be negative (error-correcting); use its absolute value
     if ec_speed is not None and ec_speed < 0:
-        adj_rate = min(abs(ec_speed), 0.95)  # cap at 95% per week
+        adj_rate = min(abs(ec_speed), 0.95)
         remaining_gap = gap
         current = actual
         for w in range(1, weeks + 1):
             correction = remaining_gap * adj_rate
             current -= correction
             remaining_gap -= correction
-            trajectory.append({"week": w, "projected_tgp": round(current, 1)})
+            lo, hi = _ci_bounds(current, w)
+            trajectory.append({"week": w, "projected_tgp": round(current, 1), "ci_lower": lo, "ci_upper": hi})
         return trajectory
 
     # Fallback: use asymmetric pass-through curves (legacy behaviour)
@@ -1043,7 +1047,8 @@ def compute_tgp_trajectory(
             else:
                 frac = min(w / 1.5, 1.0)
             projected = actual + abs(gap) * frac
-        trajectory.append({"week": w, "projected_tgp": round(projected, 1)})
+        lo, hi = _ci_bounds(projected, w)
+        trajectory.append({"week": w, "projected_tgp": round(projected, 1), "ci_lower": lo, "ci_upper": hi})
 
     return trajectory
 
