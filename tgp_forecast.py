@@ -657,12 +657,20 @@ def scenario_forecast(model_results: dict, conditions: dict) -> list[dict]:
     param_names = list(lr_model.params.index)
     excise = conditions["excise"]
 
-    # Snap WTI scenarios to nearest $5 around current, plus standard range
+    # Centre WTI scenarios around current price in $10 steps
     cur_wti = conditions["wti_usd"]
-    snapped = round(cur_wti / 5) * 5
-    wti_scenarios = sorted(set([65, 75, 85, 95, 110, 120, 130, snapped]))
+    wti_centre = round(cur_wti / 5) * 5
+    wti_scenarios = sorted(set(
+        [wti_centre + d for d in (-30, -20, -10, 0, 10, 20, 30)]
+    ))
 
-    fx_scenarios = [0.56, 0.60, 0.64, 0.68, 0.72]
+    # Centre FX scenarios around current rate in 0.04 steps
+    cur_fx = conditions["audusd"]
+    fx_centre = round(cur_fx / 0.02) * 0.02  # snap to nearest 0.02
+    fx_scenarios = sorted(set(
+        round(fx_centre + d, 2) for d in (-0.08, -0.04, 0.00, 0.04, 0.08)
+    ))
+
     crack_scenarios = [15, 25, 35]
 
     forecasts = []
