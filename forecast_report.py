@@ -132,7 +132,7 @@ def decomp_bars(decomposition, total_actual):
     components = [
         ("Crude + shipping", decomposition.get("crude_oil_aud", 0), "#f97316"),
         ("Refining margin", decomposition.get("refining_margin", 0), "#6366f1"),
-        ("Excise", decomposition.get("excise", 0), "#64748b"),
+        ("Excise (known)", decomposition.get("excise", 0), "#64748b"),
         ("Base", decomposition.get("intercept", 0), "#cbd5e1"),
     ]
     residual = decomposition.get("residual", 0)
@@ -654,7 +654,7 @@ def accuracy_card(accuracy_data):
     )
 
 
-def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_usd, asym):
+def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_usd, asym, threshold=20):
     """Build a one-line executive summary for the forecast dashboard."""
     parts = []
 
@@ -662,10 +662,10 @@ def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_
     parts.append(f"Diesel TGP at {actual:.0f} cpl (${actual/100:.2f}/L)")
 
     # Pass-through speed context
-    if residual > 20:
+    if residual > threshold:
         fall_weeks = asym.get("weeks_90pct_fall", 5)
         parts.append(f"prices are sticky on the way down (falls take ~{fall_weeks} weeks to flow through)")
-    elif residual < -20:
+    elif residual < -threshold:
         rise_weeks = asym.get("weeks_90pct_rise", 1)
         parts.append(f"expect prices to catch up quickly (~{rise_weeks} week)")
 
@@ -673,9 +673,9 @@ def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_
     if trajectory and len(trajectory) > 1:
         end_tgp = trajectory[-1]["projected_tgp"]
         weeks = trajectory[-1]["week"]
-        if residual > 20:
+        if residual > threshold:
             parts.append(f"projected to ease toward {end_tgp:.0f} cpl over {weeks} weeks")
-        elif residual < -20:
+        elif residual < -threshold:
             parts.append(f"projected to rise toward {end_tgp:.0f} cpl over {weeks} weeks")
 
     # WTI context
@@ -684,9 +684,9 @@ def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_
     summary = ", ".join(parts) + "."
 
     # Banner color
-    if residual > 20:
+    if residual > threshold:
         bg, border = "#fef2f2", "#fecaca"
-    elif residual < -20:
+    elif residual < -threshold:
         bg, border = "#fffbeb", "#fde68a"
     else:
         bg, border = "#f0fdf4", "#bbf7d0"
@@ -711,6 +711,14 @@ def generate_html(data):
     predicted = decomp["predicted_total"]
     residual = decomp["residual"]
     r_sq = model.get("r_squared", 0)
+    rmse = decomp.get("model_rmse", model.get("rmse", 20))
+    threshold = rmse  # 1x RMSE = signal threshold
+
+    # Cointegration and ECM info
+    coint = data.get("cointegration", {})
+    ecm_info = data.get("ecm", {})
+    pred_interval = data.get("prediction_interval", {})
+    oos = data.get("oos_validation", {})
 
     try:
         history = load_tgp_history(120)
@@ -727,23 +735,23 @@ def generate_html(data):
     else:
         wow_html = ""
 
-    # Direction
-    if residual > 20:
+    # Direction — threshold from model RMSE (1σ)
+    if residual > threshold:
         dir_icon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4l8 8h-5v8h-6v-8H4l8-8z" fill="#ef4444" transform="rotate(180 12 12)"/></svg>'
         dir_label = "Expect decline"
-        dir_detail = f"TGP is {residual:.0f} cpl above equilibrium. As the lag unwinds, TGP should drift down over {asym.get('weeks_90pct_fall', 5)} weeks."
+        dir_detail = f"TGP is {residual:.0f} cpl above equilibrium (&gt;{threshold:.0f} cpl RMSE threshold). As the lag unwinds, TGP should drift down over {asym.get('weeks_90pct_fall', 5)} weeks."
         dir_color = "#fef2f2"
         dir_border = "#fecaca"
-    elif residual < -20:
+    elif residual < -threshold:
         dir_icon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4l8 8h-5v8h-6v-8H4l8-8z" fill="#f59e0b"/></svg>'
         dir_label = "Expect further rises"
-        dir_detail = f"TGP is {abs(residual):.0f} cpl below equilibrium. Prices have not yet caught up to current market inputs."
+        dir_detail = f"TGP is {abs(residual):.0f} cpl below equilibrium (&gt;{threshold:.0f} cpl RMSE threshold). Prices have not yet caught up to current market inputs."
         dir_color = "#fffbeb"
         dir_border = "#fde68a"
     else:
         dir_icon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 12h16m-4-4l4 4-4 4" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         dir_label = "Near equilibrium"
-        dir_detail = f"TGP is within {abs(residual):.0f} cpl of model prediction. Direction depends on crude and AUD/USD moves."
+        dir_detail = f"TGP is within {abs(residual):.0f} cpl of model prediction (RMSE band: &plusmn;{threshold:.0f} cpl). Direction depends on crude and AUD/USD moves."
         dir_color = "#f0fdf4"
         dir_border = "#bbf7d0"
 
@@ -798,68 +806,60 @@ def generate_html(data):
         actual, predicted, residual,
         wow if len(history) > 7 else 0,
         trajectory, cond["wti_usd"], asym,
+        threshold=threshold,
     )
 
-
-    # Short-term outlook: tomorrow (momentum-based), 1-week, 8-week (trajectory)
-    # TGP is sticky day-to-day — tomorrow's price is driven by recent momentum,
-    # NOT the weekly trajectory. The trajectory shows where TGP is headed over weeks
-    # as the asymmetric lag unwinds.
+    # Price Outlook — uses model-based prediction intervals where available,
+    # falls back to RMSE-scaled intervals.
     next_day_html = ""
 
-    # Daily volatility for 90% CI
-    daily_std = 5.0  # fallback
-    if not history.empty and len(history) >= 10:
-        daily_changes = history["diesel_tgp"].diff().dropna()
-        if len(daily_changes) >= 10:
-            recent_changes = daily_changes.iloc[-30:]
-            daily_std = recent_changes.std()
-
-    # Also factor in model RMSE (weekly, scaled to daily) as a floor
-    model_rmse = model.get("rmse", 0)
-    if model_rmse > 0:
-        daily_model_std = model_rmse / (5 ** 0.5)
-        daily_std = max(daily_std, daily_model_std)
-
     if not history.empty and len(history) >= 3:
-        # Week ahead and 8-week from trajectory
         week1_est = trajectory[1]["projected_tgp"] if trajectory and len(trajectory) >= 2 else None
         week8_est = trajectory[-1]["projected_tgp"] if trajectory and len(trajectory) >= 2 else None
 
-        # Weekly CI widens with sqrt(time)
-        ci_half_1w = 1.645 * daily_std * (5 ** 0.5)
-
         outlook_rows = ""
 
-        if week1_est is not None:
-            w1_lo = week1_est - ci_half_1w
-            w1_hi = week1_est + ci_half_1w
+        # Use model-based prediction interval for equilibrium estimate
+        if pred_interval:
+            pi_lo = pred_interval.get("ci_lower", 0)
+            pi_hi = pred_interval.get("ci_upper", 0)
+            pi_conf = pred_interval.get("confidence", "90%")
             outlook_rows += (
                 f'<div style="display:flex;gap:6px;align-items:baseline">'
-                f'<span style="color:#64748b;width:80px;flex-shrink:0">1 week</span>'
+                f'<span style="color:#64748b;width:100px;flex-shrink:0">Equilibrium</span>'
+                f'<span style="color:#1e293b;font-weight:600">{predicted:.0f} cpl (${predicted/100:.2f}/L)</span>'
+                f'<span style="color:#94a3b8;font-size:11px">{pi_conf} PI: {pi_lo:.0f}&ndash;{pi_hi:.0f}</span>'
+                f'</div>'
+            )
+
+        if week1_est is not None:
+            # Scale RMSE for 1-week uncertainty
+            w1_half = 1.645 * rmse / (4 ** 0.5)  # ~sqrt(weeks) scaling from weekly RMSE
+            outlook_rows += (
+                f'<div style="display:flex;gap:6px;align-items:baseline;margin-top:4px">'
+                f'<span style="color:#64748b;width:100px;flex-shrink:0">1 week</span>'
                 f'<span style="color:#1e293b;font-weight:600">~{week1_est:.0f} cpl (${week1_est/100:.2f}/L)</span>'
-                f'<span style="color:#94a3b8;font-size:11px">90% CI: {w1_lo:.0f}&ndash;{w1_hi:.0f}</span>'
+                f'<span style="color:#94a3b8;font-size:11px">90% CI: {week1_est - w1_half:.0f}&ndash;{week1_est + w1_half:.0f}</span>'
                 f'</div>'
             )
 
         if week8_est is not None:
-            ci_half_8w = 1.645 * daily_std * (40 ** 0.5)
-            w8_lo = week8_est - ci_half_8w
-            w8_hi = week8_est + ci_half_8w
+            # 8-week CI is wider — scale by sqrt(8)
+            w8_half = 1.645 * rmse * (8 ** 0.5) / (4 ** 0.5)
             outlook_rows += (
                 f'<div style="display:flex;gap:6px;align-items:baseline;margin-top:4px">'
-                f'<span style="color:#64748b;width:80px;flex-shrink:0">8 weeks</span>'
+                f'<span style="color:#64748b;width:100px;flex-shrink:0">8 weeks</span>'
                 f'<span style="color:#1e293b;font-weight:600">~{week8_est:.0f} cpl (${week8_est/100:.2f}/L)</span>'
-                f'<span style="color:#94a3b8;font-size:11px">90% CI: {w8_lo:.0f}&ndash;{w8_hi:.0f}</span>'
+                f'<span style="color:#94a3b8;font-size:11px">90% CI: {week8_est - w8_half:.0f}&ndash;{week8_est + w8_half:.0f}</span>'
                 f'</div>'
             )
 
         # Stickiness explanation
         rise_weeks = asym.get("weeks_90pct_rise", "?")
         fall_weeks = asym.get("weeks_90pct_fall", "?")
-        if residual > 20:
+        if residual > threshold:
             sticky_note = f"TGP is sticky on the way down &mdash; falls take ~{fall_weeks} weeks to pass through."
-        elif residual < -20:
+        elif residual < -threshold:
             sticky_note = f"Rises pass through fast &mdash; expect catch-up within ~{rise_weeks} week(s)."
         else:
             sticky_note = "TGP is near equilibrium. Direction depends on crude and FX moves."
@@ -1032,10 +1032,13 @@ def generate_html(data):
     <div class="logo">Booth<span>.</span> Fuel Intelligence</div>
   </div>
   <div style="text-align:right">
-    <div class="top-meta">{run_date} &middot; Model R&sup2;
+    <div class="top-meta">{run_date} &middot; R&sup2;
       <span class="badge" style="background:{"#f0fdf4;color:#16a34a" if r_sq > 0.95 else "#fffbeb;color:#d97706" if r_sq > 0.85 else "#fef2f2;color:#dc2626"}">{r_sq:.1%}</span>
+      &middot; Cointegrated
+      <span class="badge" style="background:{"#f0fdf4;color:#16a34a" if coint.get("cointegrated") else "#fef2f2;color:#dc2626"}">{"Yes" if coint.get("cointegrated") else "No"} (p={coint.get("adf_pvalue", 1):.3f})</span>
+      {"&middot; OOS MAE <span class='badge' style='background:#f0fdf4;color:#16a34a'>" + f'{oos["mae"]:.0f} cpl</span>' if oos.get("mae") else ""}
     </div>
-    <div class="top-meta">Auto-updated weekdays at 11am AEST</div>
+    <div class="top-meta">Auto-updated weekdays at 11am AEST &middot; ECM with ex-excise specification</div>
   </div>
 </div>
 
@@ -1189,7 +1192,8 @@ def generate_html(data):
 
   <footer>
     Data sources: AIP Terminal Gate Prices &middot; Yahoo Finance (WTI, AUD/USD, Heating Oil futures)<br>
-    Model: OLS multi-factor regression with 1-week lag. R&sup2; = {r_sq:.1%} on {data.get("run_date", "")}.
+    Model: Cointegrated ECM on ex-excise TGP (excise treated as known deterministic). R&sup2; = {r_sq:.1%}.
+    {"OOS validation (" + str(oos.get("n", 0)) + " weeks): MAE " + f'{oos["mae"]:.1f} cpl, RMSE {oos["rmse"]:.1f} cpl.' if oos.get("mae") else ""}
   </footer>
 
 </div>
