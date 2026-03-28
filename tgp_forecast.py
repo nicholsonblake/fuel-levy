@@ -1,12 +1,13 @@
 """
 TGP Multi-Factor Forecast Model
-Predicts Australian diesel Terminal Gate Prices using:
-  - WTI crude oil (USD/bbl)
-  - AUD/USD exchange rate
-  - Heating Oil crack spread (diesel refining margin proxy)
-  - Fuel excise (fixed, ATO schedule)
+Predicts Australian diesel Terminal Gate Prices using a cointegrated
+Error Correction Model (ECM) on ex-excise TGP:
+  - WTI crude oil in AUD cents-per-litre
+  - Diesel crack spread (heating oil - WTI, in AUD cpl)
+  - Fuel excise subtracted as known deterministic component
+  - Asymmetric pass-through (rockets and feathers)
 
-Designed to run daily via GitHub Actions at ~11am AEST.
+Designed to run daily via GitHub Actions during AEST business hours.
 Outputs forecast to forecast/ directory and appends to prediction log.
 
 Usage:
