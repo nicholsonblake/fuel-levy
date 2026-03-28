@@ -392,16 +392,19 @@ def barrel_chart(wti_history, tgp_history, w=800, h=320):
 def trajectory_chart(trajectory, actual_tgp, predicted_tgp, w=600, h=260):
     """
     Forward-looking chart showing projected TGP path over the next 8 weeks.
-    Shows current TGP, equilibrium line, and convergence path.
+    Shows current TGP, equilibrium line, convergence path, and 90% CI band.
     """
     if not trajectory or len(trajectory) < 2:
         return ""
 
     weeks = [t["week"] for t in trajectory]
     vals = [t["projected_tgp"] for t in trajectory]
+    ci_lo = [t.get("ci_lower", t["projected_tgp"]) for t in trajectory]
+    ci_hi = [t.get("ci_upper", t["projected_tgp"]) for t in trajectory]
     n = len(vals)
 
-    all_vals = vals + [predicted_tgp, actual_tgp]
+    # Y range must encompass CI bounds
+    all_vals = vals + ci_lo + ci_hi + [predicted_tgp, actual_tgp]
     y_min = min(all_vals) * 0.96
     y_max = max(all_vals) * 1.03
     y_range = y_max - y_min or 1
@@ -434,6 +437,29 @@ def trajectory_chart(trajectory, actual_tgp, predicted_tgp, w=600, h=260):
           font-weight="600" font-family="Inter,system-ui,sans-serif">{predicted_tgp:.0f} eq</text>
     """
 
+    # 90% CI band — filled polygon from upper bound forward, lower bound back
+    ci_upper_points = [(xp(i), yp(ci_hi[i])) for i in range(n)]
+    ci_lower_points = [(xp(i), yp(ci_lo[i])) for i in range(n)]
+
+    # Build smooth bezier for upper edge
+    ci_upper_path = f"M {ci_upper_points[0][0]:.1f},{ci_upper_points[0][1]:.1f}"
+    for i in range(1, n):
+        x0, y0 = ci_upper_points[i - 1]
+        x1, y1 = ci_upper_points[i]
+        cpx = (x0 + x1) / 2
+        ci_upper_path += f" C {cpx:.1f},{y0:.1f} {cpx:.1f},{y1:.1f} {x1:.1f},{y1:.1f}"
+
+    # Build smooth bezier for lower edge (reversed for polygon closure)
+    ci_lower_rev = list(reversed(ci_lower_points))
+    ci_lower_path = f" L {ci_lower_rev[0][0]:.1f},{ci_lower_rev[0][1]:.1f}"
+    for i in range(1, len(ci_lower_rev)):
+        x0, y0 = ci_lower_rev[i - 1]
+        x1, y1 = ci_lower_rev[i]
+        cpx = (x0 + x1) / 2
+        ci_lower_path += f" C {cpx:.1f},{y0:.1f} {cpx:.1f},{y1:.1f} {x1:.1f},{y1:.1f}"
+
+    ci_band_path = ci_upper_path + ci_lower_path + " Z"
+
     # Trajectory path with area fill
     points = [(xp(i), yp(v)) for i, v in enumerate(vals)]
     path_d = f"M {points[0][0]:.1f},{points[0][1]:.1f}"
@@ -457,7 +483,6 @@ def trajectory_chart(trajectory, actual_tgp, predicted_tgp, w=600, h=260):
     for i, (px, py) in enumerate(points):
         v = vals[i]
         dots += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="4" fill="#fff" stroke="#f97316" stroke-width="2"/>\n'
-        # Label every other point or first/last
         if i == 0 or i == n - 1 or i % 2 == 0:
             anchor = "start" if i == 0 else "end" if i == n - 1 else "middle"
             y_off = -12
@@ -472,6 +497,7 @@ def trajectory_chart(trajectory, actual_tgp, predicted_tgp, w=600, h=260):
     </defs>
     {grid}
     {eq_line}
+    <path d="{ci_band_path}" fill="#f97316" opacity="0.08"/>
     <path d="{area_d}" fill="url(#trajGrad)"/>
     <path d="{path_d}" fill="none" stroke="#f97316" stroke-width="2.5"
           stroke-linejoin="round" stroke-linecap="round"/>
@@ -1150,8 +1176,12 @@ def generate_html(data):
           <div style="width:12px;height:3px;background:#6366f1;border-radius:2px"></div>
           <span style="font-size:12px;color:#1e293b;font-weight:600">Equilibrium: {predicted:.0f} cpl</span>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:12px;height:8px;background:#f97316;opacity:0.15;border-radius:2px"></div>
+          <span style="font-size:12px;color:#94a3b8">90% confidence band</span>
+        </div>
         <div style="font-size:11px;color:#94a3b8;margin-top:8px">
-          Based on the asymmetric pass-through model: rises flow through in ~{asym.get("weeks_90pct_rise", "?")} week(s), falls in ~{asym.get("weeks_90pct_fall", "?")} weeks.
+          Rises flow through in ~{asym.get("weeks_90pct_rise", "?")} week(s), falls in ~{asym.get("weeks_90pct_fall", "?")} weeks.
         </div>
       </div>
     </div>
