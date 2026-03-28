@@ -167,7 +167,9 @@ def scenario_table(forecasts_path, conditions):
     df = pd.read_csv(forecasts_path)
 
     current_crack = conditions.get("diesel_crack_aud_cpl", 25)
-    crack = 35 if current_crack > 28 else (15 if current_crack < 12 else 25)
+    # Snap to nearest available bucket rather than coarse hard-coded thresholds
+    available_cracks = sorted(df["crack_spread_usd"].unique())
+    crack = min(available_cracks, key=lambda c: abs(c - current_crack)) if available_cracks else 25
 
     subset = df[df["crack_spread_usd"] == crack]
     if subset.empty:
@@ -519,18 +521,14 @@ def asym_bars(asymmetry, w=600, h=200):
     </svg>"""
 
 
-def load_prediction_accuracy(limit=8):
+def load_prediction_accuracy(limit=30):
     """
     Compare past trajectory projections against actual outcomes.
-    Reads the trajectory log (one row per run_date with projected TGP for future weeks)
-    and checks actual TGP at those dates.
+    Reads the trajectory log and checks actual TGP at those dates.
+    Preserves the week horizon so accuracy can be reported per-horizon.
 
-    Falls back to next-day estimates from the prediction log if trajectory log
-    doesn't exist yet.
-
-    Returns list of dicts: [{run_date, target_date, projected, actual, error, error_pct}, ...]
+    Returns list of dicts with 'week' field for horizon grouping.
     """
-    # Try trajectory log first (written by tgp_forecast.py if available)
     traj_log_path = FORECAST_DIR / "trajectory_log.csv"
 
     tgp_path = DATA_DIR / "diesel_tgp_history.csv"
@@ -551,11 +549,13 @@ def load_prediction_accuracy(limit=8):
             if actual is None:
                 continue
             projected = float(row["projected_tgp"])
+            week = int(row.get("week", 0))
             error = actual - projected
             error_pct = (error / actual) * 100 if actual else 0
             results.append({
                 "run_date": row["run_date"],
                 "target_date": target,
+                "week": week,
                 "projected": projected,
                 "actual": actual,
                 "error": error,
@@ -563,8 +563,7 @@ def load_prediction_accuracy(limit=8):
             })
         return results[-limit:]
 
-    # Fallback: use prediction_log.csv but compare Week 1 trajectory estimates
-    # against actual TGP one week later
+    # Fallback: use prediction_log.csv (week=1 horizon)
     log_path = FORECAST_DIR / "prediction_log.csv"
     if not log_path.exists():
         return []
@@ -572,17 +571,13 @@ def load_prediction_accuracy(limit=8):
     with open(log_path, "r", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
-    # Group by run_date, take last per date
     by_date = {}
     for row in rows:
         by_date[row["run_date"]] = row
 
-    # For each run_date, check if we have actual TGP 5 trading days later
-    sorted_dates = sorted(by_date.keys())
-    for run_date in sorted_dates:
-        # Find actual TGP ~5 trading days after run_date
+    for run_date in sorted(by_date.keys()):
         rd = pd.Timestamp(run_date)
-        for offset in range(5, 10):  # look 5-9 calendar days ahead for next trading day
+        for offset in range(5, 10):
             target = str((rd + pd.Timedelta(days=offset)).date())
             actual = tgp_dict.get(target)
             if actual is not None:
@@ -592,6 +587,7 @@ def load_prediction_accuracy(limit=8):
                 results.append({
                     "run_date": run_date,
                     "target_date": target,
+                    "week": 1,
                     "projected": predicted,
                     "actual": actual,
                     "error": error,
@@ -603,7 +599,10 @@ def load_prediction_accuracy(limit=8):
 
 
 def accuracy_card(accuracy_data):
-    """Render a forecast accuracy tracking card."""
+    """
+    Render a forecast accuracy card grouped by horizon.
+    Shows summary MAE by horizon (1w, 4w, 8w) plus a detail table.
+    """
     if not accuracy_data:
         return (
             '<div class="card">'
@@ -614,18 +613,49 @@ def accuracy_card(accuracy_data):
             '</div>'
         )
 
-    # Summary stats
-    errors = [abs(a["error_pct"]) for a in accuracy_data]
-    avg_error = sum(errors) / len(errors)
+    # Group by horizon bucket: 1w (week 1), 4w (week 2-4), 8w (week 5-8)
+    buckets = {"1w": [], "4w": [], "8w": []}
+    for a in accuracy_data:
+        w = a.get("week", 1)
+        if w <= 1:
+            buckets["1w"].append(a)
+        elif w <= 4:
+            buckets["4w"].append(a)
+        else:
+            buckets["8w"].append(a)
 
-    # Build table rows
+    # Summary pills per horizon
+    pills = ""
+    for label, items in buckets.items():
+        if not items:
+            continue
+        mae = sum(abs(a["error"]) for a in items) / len(items)
+        mape = sum(abs(a["error_pct"]) for a in items) / len(items)
+        color = "#16a34a" if mape < 3 else "#d97706" if mape < 7 else "#dc2626"
+        bg = "#f0fdf4" if mape < 3 else "#fffbeb" if mape < 7 else "#fef2f2"
+        pills += (
+            f'<div style="flex:1;text-align:center;padding:16px 12px;background:{bg};border-radius:12px">'
+            f'<div style="font-size:28px;font-weight:800;color:{color};letter-spacing:-1px">{mae:.0f}</div>'
+            f'<div style="font-size:11px;font-weight:600;text-transform:uppercase;color:{color};margin-top:2px">'
+            f'MAE cpl ({label})</div>'
+            f'<div style="font-size:11px;color:#94a3b8;margin-top:2px">{mape:.1f}% &middot; n={len(items)}</div>'
+            f'</div>'
+        )
+
+    # Overall stats
+    all_errors = [abs(a["error_pct"]) for a in accuracy_data]
+    avg_error = sum(all_errors) / len(all_errors)
+
+    # Detail table (most recent 10)
+    recent = sorted(accuracy_data, key=lambda a: (a["run_date"], a["week"]))[-10:]
     rows = ""
-    for a in reversed(accuracy_data):
+    for a in reversed(recent):
         err_color = "#22c55e" if abs(a["error_pct"]) < 5 else "#f59e0b" if abs(a["error_pct"]) < 10 else "#ef4444"
+        horizon = f'W{a.get("week", "?")}'
         rows += (
             f'<tr>'
             f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9">{a["run_date"]}</td>'
-            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9">{a["target_date"]}</td>'
+            f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:center">{horizon}</td>'
             f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">{a["projected"]:.0f}</td>'
             f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">{a["actual"]:.0f}</td>'
             f'<td style="padding:8px 12px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;color:{err_color};font-weight:600">'
@@ -637,14 +667,15 @@ def accuracy_card(accuracy_data):
     return (
         f'<div class="card">'
         f'<div class="card-title">Forecast Accuracy '
-        f'<span class="badge" style="background:{accuracy_badge_color};margin-left:8px">Avg error {avg_error:.1f}%</span></div>'
-        f'<div class="card-desc">How well trajectory projections matched actual TGP. '
-        f'Each row compares what we projected on the run date vs what TGP actually was on the target date.</div>'
+        f'<span class="badge" style="background:{accuracy_badge_color};margin-left:8px">Avg {avg_error:.1f}%</span></div>'
+        f'<div class="card-desc">Accuracy by forecast horizon. A 1-week and 8-week error are not comparable — '
+        f'longer horizons naturally have wider uncertainty.</div>'
+        f'<div style="display:flex;gap:12px;margin-bottom:20px">{pills}</div>'
         f'<div style="overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0">'
         f'<table style="width:100%;border-collapse:collapse">'
         f'<thead><tr style="background:#f8fafc">'
         f'<th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Run Date</th>'
-        f'<th style="padding:10px 12px;text-align:left;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Target Date</th>'
+        f'<th style="padding:10px 12px;text-align:center;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Horizon</th>'
         f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Projected</th>'
         f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Actual</th>'
         f'<th style="padding:10px 12px;text-align:right;font-size:12px;color:#64748b;border-bottom:2px solid #e2e8f0">Error</th>'

@@ -494,69 +494,130 @@ def prediction_interval(model_results: dict, conditions: dict, alpha: float = 0.
 
 
 # ---------------------------------------------------------------------------
-# Asymmetric lag analysis (rockets and feathers)
+# Asymmetric pass-through (rockets and feathers)
 # ---------------------------------------------------------------------------
 def asymmetric_lag_analysis(data: pd.DataFrame) -> dict:
     """
-    Estimate asymmetric pass-through: how fast do crude price INCREASES
-    vs DECREASES flow through to TGP?
-    Uses weekly changes with distributed lags.
+    Parsimonious asymmetric ECM for pass-through speed.
+
+    Model (6 parameters):
+        Δtgp = const + β_up·Δcrude_up + β_down·Δcrude_down
+               + γ_up·EC⁺_{t-1} + γ_down·EC⁻_{t-1} + δ·Δtgp_{t-1}
+
+    where EC = tgp - equilibrium (from long-run model).
+
+    This replaces the previous 18-parameter distributed lag with a
+    model that has clear economic interpretation:
+      - β_up, β_down: immediate (contemporaneous) pass-through asymmetry
+      - γ_up, γ_down: asymmetric error-correction speed
+      - δ: TGP momentum / persistence
+
+    The cumulative impulse response is then derived analytically from
+    these coefficients using geometric decay, rather than estimated
+    freely at each lag (which wastes degrees of freedom).
     """
-    weekly = data.resample("W").last().dropna(subset=["WTI_AUD_CPL", "diesel_tgp"])
-    weekly["tgp_chg"] = weekly["diesel_tgp"].diff()
+    weekly = data.resample("W").last().dropna(subset=["WTI_AUD_CPL", "tgp_ex_excise"])
+    weekly = weekly.copy()
+    weekly["tgp_chg"] = weekly["tgp_ex_excise"].diff()
     weekly["crude_chg"] = weekly["WTI_AUD_CPL"].diff()
     weekly["crude_up"] = weekly["crude_chg"].clip(lower=0)
     weekly["crude_down"] = weekly["crude_chg"].clip(upper=0)
 
-    # Create lagged positive and negative changes (0-8 weeks)
-    max_lag = 8
-    lag_cols_up = []
-    lag_cols_down = []
-    for lag in range(0, max_lag + 1):
-        up_col = f"crude_up_lag{lag}"
-        down_col = f"crude_down_lag{lag}"
-        weekly[up_col] = weekly["crude_up"].shift(lag)
-        weekly[down_col] = weekly["crude_down"].shift(lag)
-        lag_cols_up.append(up_col)
-        lag_cols_down.append(down_col)
+    # Lagged TGP change (persistence / momentum)
+    weekly["tgp_chg_lag1"] = weekly["tgp_chg"].shift(1)
 
-    weekly = weekly.dropna()
+    # Simple equilibrium residual: tgp_ex_excise - f(crude, crack)
+    # Use a quick OLS for the long-run relationship
+    lr_subset = weekly.dropna(subset=["WTI_AUD_CPL", "tgp_ex_excise"])
+    lr_cols = ["WTI_AUD_CPL"]
+    if "diesel_crack_aud_cpl" in lr_subset.columns:
+        lr_cols.append("diesel_crack_aud_cpl")
+    X_lr = sm.add_constant(lr_subset[lr_cols])
+    lr_fit = sm.OLS(lr_subset["tgp_ex_excise"], X_lr).fit()
+    weekly["ec_residual"] = weekly["tgp_ex_excise"] - lr_fit.predict(
+        sm.add_constant(weekly[lr_cols])
+    )
 
-    if len(weekly) < 30:
+    # Split EC into positive (TGP above equilibrium) and negative
+    weekly["ec_pos"] = weekly["ec_residual"].shift(1).clip(lower=0)
+    weekly["ec_neg"] = weekly["ec_residual"].shift(1).clip(upper=0)
+
+    weekly = weekly.dropna(subset=[
+        "tgp_chg", "crude_up", "crude_down", "ec_pos", "ec_neg", "tgp_chg_lag1"
+    ])
+
+    if len(weekly) < 40:
         return {"error": "Insufficient data for asymmetric analysis"}
 
-    # Regression with distributed lags
-    X = sm.add_constant(weekly[lag_cols_up + lag_cols_down])
+    # Asymmetric ECM regression (6 parameters)
     y = weekly["tgp_chg"]
+    X = sm.add_constant(weekly[[
+        "crude_up", "crude_down", "ec_pos", "ec_neg", "tgp_chg_lag1",
+    ]])
     model = sm.OLS(y, X).fit()
 
-    # Cumulative impulse response
-    up_coeffs = [model.params.get(f"crude_up_lag{i}", 0) for i in range(max_lag + 1)]
-    down_coeffs = [model.params.get(f"crude_down_lag{i}", 0) for i in range(max_lag + 1)]
-    cum_up = np.cumsum(up_coeffs)
-    cum_down = np.cumsum(down_coeffs)
+    beta_up = float(model.params.get("crude_up", 0))
+    beta_down = float(model.params.get("crude_down", 0))
+    gamma_up = float(model.params.get("ec_pos", 0))    # should be negative
+    gamma_down = float(model.params.get("ec_neg", 0))   # should be negative
+    delta = float(model.params.get("tgp_chg_lag1", 0))  # persistence
 
-    # Find weeks to 90% pass-through
+    # Derive cumulative impulse response analytically.
+    # After a 1 cpl shock, week-0 pass-through = β, then each subsequent
+    # week the remaining gap decays geometrically at rate (1 - |γ| + δ).
+    max_weeks = 9
+    cum_up = _cumulative_impulse(beta_up, gamma_up, delta, max_weeks)
+    cum_down = _cumulative_impulse(beta_down, gamma_down, delta, max_weeks)
+
+    # Weeks to 90% pass-through
     total_up = cum_up[-1] if cum_up[-1] != 0 else 1
     total_down = cum_down[-1] if cum_down[-1] != 0 else 1
 
     weeks_90_up = next(
-        (i for i, v in enumerate(cum_up) if v >= 0.9 * total_up), max_lag
+        (i for i, v in enumerate(cum_up) if v >= 0.9 * total_up), max_weeks - 1
     )
     weeks_90_down = next(
-        (i for i, v in enumerate(cum_down) if abs(v) >= 0.9 * abs(total_down)), max_lag
+        (i for i, v in enumerate(cum_down) if abs(v) >= 0.9 * abs(total_down)),
+        max_weeks - 1,
     )
 
     return {
         "model": model,
-        "cum_up": cum_up.tolist(),
-        "cum_down": cum_down.tolist(),
+        "beta_up": beta_up,
+        "beta_down": beta_down,
+        "gamma_up": gamma_up,
+        "gamma_down": gamma_down,
+        "persistence": delta,
+        "cum_up": cum_up,
+        "cum_down": cum_down,
         "total_up_passthrough": float(total_up),
         "total_down_passthrough": float(total_down),
         "weeks_90pct_up": weeks_90_up,
         "weeks_90pct_down": weeks_90_down,
         "r_squared": model.rsquared,
+        "n_params": len(model.params),
+        "n_obs": len(weekly),
     }
+
+
+def _cumulative_impulse(
+    beta: float, gamma: float, delta: float, weeks: int,
+) -> list[float]:
+    """
+    Analytically derive cumulative impulse response from a 1 cpl shock.
+    Week 0: pass-through = beta
+    Week k>0: remaining gap shrinks by |gamma| and momentum decays by delta
+    """
+    cum = [beta]
+    remaining = 1.0 - beta
+    for _ in range(1, weeks):
+        # Error correction closes |gamma| of remaining gap
+        # Plus momentum carries forward delta of last week's change
+        correction = -gamma * remaining + delta * (cum[-1] - (cum[-2] if len(cum) > 1 else 0))
+        new_pass = max(0, min(correction, remaining)) if remaining > 0 else min(0, max(correction, remaining))
+        cum.append(cum[-1] + new_pass)
+        remaining -= new_pass
+    return cum
 
 
 # ---------------------------------------------------------------------------
