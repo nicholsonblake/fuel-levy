@@ -1,37 +1,690 @@
 {
-  "run_date": "2026-03-28",
+  "run_date": "2026-03-27",
   "conditions": {
     "date": "2026-03-27",
-    "wti_usd": 99.63999938964844,
-    "audusd": 0.6887398958206177,
-    "wti_aud_cpl": 90.99485999249997,
-    "diesel_crack_aud_cpl": 81.43419410828376,
+    "wti_usd": 95.08000183105469,
+    "audusd": 0.6889804601669312,
+    "wti_aud_cpl": 86.80018716450553,
+    "diesel_crack_aud_cpl": 72.57821410950979,
     "excise": 52.3,
-    "diesel_tgp_actual": 311.09,
-    "tgp_ex_excise": 258.78999999999996
+    "diesel_tgp_actual": 311.09
   },
   "decomposition": {
-    "intercept": 9.7,
-    "crude_oil_aud": 107.26,
-    "refining_margin": 81.27,
-    "excise": 52.3,
-    "model_rmse": 7.0,
-    "predicted_ex_excise": 198.24,
-    "predicted_total": 250.54,
+    "intercept": 6.99,
+    "crude_oil_aud": 103.09,
+    "refining_margin": 73.98,
+    "excise": 54.65,
+    "predicted_total": 238.71,
     "actual_total": 311.09,
-    "residual": 60.55
+    "residual": 72.38
   },
   "model": {
-    "r_squared": 0.954,
-    "r_squared_adj": 0.9538,
-    "rmse": 7.0,
+    "r_squared": 0.9653,
+    "r_squared_adj": 0.9651,
+    "rmse": 6.23,
     "coefficients": {
-      "const": 9.698458,
-      "WTI_AUD_CPL": 1.178795,
-      "diesel_crack_aud_cpl": 0.998013
+      "const": 6.993155,
+      "WTI_AUD_CPL_lag1": 1.187677,
+      "diesel_crack_aud_cpl_lag1": 1.019379,
+      "excise_lag1": 1.044847
     }
   },
-  "cointegration": {
-    "adf_stat": -2.9054,
-    "adf_pvalue": 0.0447,
-    "cointegrated": 
+  "asymmetry": {
+    "weeks_90pct_rise": 1,
+    "weeks_90pct_fall": 6,
+    "total_up_passthrough": 2.188,
+    "total_down_passthrough": 1.6945,
+    "cum_up": [
+      0.4902,
+      2.0608,
+      2.3364,
+      2.6914,
+      2.2635,
+      2.3086,
+      2.2373,
+      2.36,
+      2.188
+    ],
+    "cum_down": [
+      0.3298,
+      0.7574,
+      1.0239,
+      1.1246,
+      1.3096,
+      1.509,
+      1.5769,
+      1.7054,
+      1.6945
+    ]
+  },
+  "wti_history": [
+    {
+      "date": "2025-11-28",
+      "wti_usd": 58.55,
+      "wti_aud_cpl": 56.3
+    },
+    {
+      "date": "2025-11-29",
+      "wti_usd": 58.55,
+      "wti_aud_cpl": 56.3
+    },
+    {
+      "date": "2025-11-30",
+      "wti_usd": 58.55,
+      "wti_aud_cpl": 56.3
+    },
+    {
+      "date": "2025-12-01",
+      "wti_usd": 59.32,
+      "wti_aud_cpl": 57.0
+    },
+    {
+      "date": "2025-12-02",
+      "wti_usd": 58.64,
+      "wti_aud_cpl": 56.4
+    },
+    {
+      "date": "2025-12-03",
+      "wti_usd": 58.95,
+      "wti_aud_cpl": 56.4
+    },
+    {
+      "date": "2025-12-04",
+      "wti_usd": 59.67,
+      "wti_aud_cpl": 56.8
+    },
+    {
+      "date": "2025-12-05",
+      "wti_usd": 60.08,
+      "wti_aud_cpl": 57.2
+    },
+    {
+      "date": "2025-12-06",
+      "wti_usd": 60.08,
+      "wti_aud_cpl": 57.2
+    },
+    {
+      "date": "2025-12-07",
+      "wti_usd": 60.08,
+      "wti_aud_cpl": 57.2
+    },
+    {
+      "date": "2025-12-08",
+      "wti_usd": 58.88,
+      "wti_aud_cpl": 55.8
+    },
+    {
+      "date": "2025-12-09",
+      "wti_usd": 58.25,
+      "wti_aud_cpl": 55.3
+    },
+    {
+      "date": "2025-12-10",
+      "wti_usd": 58.46,
+      "wti_aud_cpl": 55.4
+    },
+    {
+      "date": "2025-12-11",
+      "wti_usd": 57.6,
+      "wti_aud_cpl": 54.3
+    },
+    {
+      "date": "2025-12-12",
+      "wti_usd": 57.44,
+      "wti_aud_cpl": 54.2
+    },
+    {
+      "date": "2025-12-13",
+      "wti_usd": 57.44,
+      "wti_aud_cpl": 54.2
+    },
+    {
+      "date": "2025-12-14",
+      "wti_usd": 57.44,
+      "wti_aud_cpl": 54.2
+    },
+    {
+      "date": "2025-12-15",
+      "wti_usd": 56.82,
+      "wti_aud_cpl": 53.8
+    },
+    {
+      "date": "2025-12-16",
+      "wti_usd": 55.27,
+      "wti_aud_cpl": 52.3
+    },
+    {
+      "date": "2025-12-17",
+      "wti_usd": 55.94,
+      "wti_aud_cpl": 53.0
+    },
+    {
+      "date": "2025-12-18",
+      "wti_usd": 56.15,
+      "wti_aud_cpl": 53.5
+    },
+    {
+      "date": "2025-12-19",
+      "wti_usd": 56.66,
+      "wti_aud_cpl": 53.9
+    },
+    {
+      "date": "2025-12-20",
+      "wti_usd": 56.66,
+      "wti_aud_cpl": 53.9
+    },
+    {
+      "date": "2025-12-21",
+      "wti_usd": 56.66,
+      "wti_aud_cpl": 53.9
+    },
+    {
+      "date": "2025-12-22",
+      "wti_usd": 58.01,
+      "wti_aud_cpl": 55.2
+    },
+    {
+      "date": "2025-12-23",
+      "wti_usd": 58.38,
+      "wti_aud_cpl": 55.1
+    },
+    {
+      "date": "2025-12-24",
+      "wti_usd": 58.35,
+      "wti_aud_cpl": 54.8
+    },
+    {
+      "date": "2025-12-25",
+      "wti_usd": 58.35,
+      "wti_aud_cpl": 54.8
+    },
+    {
+      "date": "2025-12-26",
+      "wti_usd": 56.74,
+      "wti_aud_cpl": 53.2
+    },
+    {
+      "date": "2025-12-27",
+      "wti_usd": 56.74,
+      "wti_aud_cpl": 53.2
+    },
+    {
+      "date": "2025-12-28",
+      "wti_usd": 56.74,
+      "wti_aud_cpl": 53.2
+    },
+    {
+      "date": "2025-12-29",
+      "wti_usd": 58.08,
+      "wti_aud_cpl": 54.4
+    },
+    {
+      "date": "2025-12-30",
+      "wti_usd": 57.95,
+      "wti_aud_cpl": 54.4
+    },
+    {
+      "date": "2025-12-31",
+      "wti_usd": 57.42,
+      "wti_aud_cpl": 53.9
+    },
+    {
+      "date": "2026-01-01",
+      "wti_usd": 57.42,
+      "wti_aud_cpl": 53.9
+    },
+    {
+      "date": "2026-01-02",
+      "wti_usd": 57.32,
+      "wti_aud_cpl": 54.0
+    },
+    {
+      "date": "2026-01-03",
+      "wti_usd": 57.32,
+      "wti_aud_cpl": 54.0
+    },
+    {
+      "date": "2026-01-04",
+      "wti_usd": 57.32,
+      "wti_aud_cpl": 54.0
+    },
+    {
+      "date": "2026-01-05",
+      "wti_usd": 58.32,
+      "wti_aud_cpl": 54.9
+    },
+    {
+      "date": "2026-01-06",
+      "wti_usd": 57.13,
+      "wti_aud_cpl": 53.5
+    },
+    {
+      "date": "2026-01-07",
+      "wti_usd": 55.99,
+      "wti_aud_cpl": 52.3
+    },
+    {
+      "date": "2026-01-08",
+      "wti_usd": 57.76,
+      "wti_aud_cpl": 54.0
+    },
+    {
+      "date": "2026-01-09",
+      "wti_usd": 59.12,
+      "wti_aud_cpl": 55.5
+    },
+    {
+      "date": "2026-01-10",
+      "wti_usd": 59.12,
+      "wti_aud_cpl": 55.5
+    },
+    {
+      "date": "2026-01-11",
+      "wti_usd": 59.12,
+      "wti_aud_cpl": 55.5
+    },
+    {
+      "date": "2026-01-12",
+      "wti_usd": 59.5,
+      "wti_aud_cpl": 56.0
+    },
+    {
+      "date": "2026-01-13",
+      "wti_usd": 61.15,
+      "wti_aud_cpl": 57.3
+    },
+    {
+      "date": "2026-01-14",
+      "wti_usd": 62.02,
+      "wti_aud_cpl": 58.4
+    },
+    {
+      "date": "2026-01-15",
+      "wti_usd": 59.19,
+      "wti_aud_cpl": 55.7
+    },
+    {
+      "date": "2026-01-16",
+      "wti_usd": 59.44,
+      "wti_aud_cpl": 55.8
+    },
+    {
+      "date": "2026-01-17",
+      "wti_usd": 59.44,
+      "wti_aud_cpl": 55.8
+    },
+    {
+      "date": "2026-01-18",
+      "wti_usd": 59.44,
+      "wti_aud_cpl": 55.8
+    },
+    {
+      "date": "2026-01-20",
+      "wti_usd": 60.34,
+      "wti_aud_cpl": 56.6
+    },
+    {
+      "date": "2026-01-21",
+      "wti_usd": 60.62,
+      "wti_aud_cpl": 56.6
+    },
+    {
+      "date": "2026-01-22",
+      "wti_usd": 59.36,
+      "wti_aud_cpl": 55.3
+    },
+    {
+      "date": "2026-01-23",
+      "wti_usd": 61.07,
+      "wti_aud_cpl": 56.2
+    },
+    {
+      "date": "2026-01-24",
+      "wti_usd": 61.07,
+      "wti_aud_cpl": 56.2
+    },
+    {
+      "date": "2026-01-25",
+      "wti_usd": 61.07,
+      "wti_aud_cpl": 56.2
+    },
+    {
+      "date": "2026-01-26",
+      "wti_usd": 60.63,
+      "wti_aud_cpl": 55.2
+    },
+    {
+      "date": "2026-01-27",
+      "wti_usd": 62.39,
+      "wti_aud_cpl": 56.8
+    },
+    {
+      "date": "2026-01-28",
+      "wti_usd": 63.21,
+      "wti_aud_cpl": 56.8
+    },
+    {
+      "date": "2026-01-29",
+      "wti_usd": 65.42,
+      "wti_aud_cpl": 58.5
+    },
+    {
+      "date": "2026-01-30",
+      "wti_usd": 65.21,
+      "wti_aud_cpl": 58.2
+    },
+    {
+      "date": "2026-01-31",
+      "wti_usd": 65.21,
+      "wti_aud_cpl": 58.2
+    },
+    {
+      "date": "2026-02-01",
+      "wti_usd": 65.21,
+      "wti_aud_cpl": 58.2
+    },
+    {
+      "date": "2026-02-02",
+      "wti_usd": 62.14,
+      "wti_aud_cpl": 56.3
+    },
+    {
+      "date": "2026-02-03",
+      "wti_usd": 63.21,
+      "wti_aud_cpl": 57.2
+    },
+    {
+      "date": "2026-02-04",
+      "wti_usd": 65.14,
+      "wti_aud_cpl": 58.3
+    },
+    {
+      "date": "2026-02-05",
+      "wti_usd": 63.29,
+      "wti_aud_cpl": 56.9
+    },
+    {
+      "date": "2026-02-06",
+      "wti_usd": 63.55,
+      "wti_aud_cpl": 57.8
+    },
+    {
+      "date": "2026-02-07",
+      "wti_usd": 63.55,
+      "wti_aud_cpl": 57.8
+    },
+    {
+      "date": "2026-02-08",
+      "wti_usd": 63.55,
+      "wti_aud_cpl": 57.8
+    },
+    {
+      "date": "2026-02-09",
+      "wti_usd": 64.36,
+      "wti_aud_cpl": 57.6
+    },
+    {
+      "date": "2026-02-10",
+      "wti_usd": 63.96,
+      "wti_aud_cpl": 56.8
+    },
+    {
+      "date": "2026-02-11",
+      "wti_usd": 64.63,
+      "wti_aud_cpl": 57.5
+    },
+    {
+      "date": "2026-02-12",
+      "wti_usd": 62.84,
+      "wti_aud_cpl": 55.5
+    },
+    {
+      "date": "2026-02-13",
+      "wti_usd": 62.89,
+      "wti_aud_cpl": 55.8
+    },
+    {
+      "date": "2026-02-14",
+      "wti_usd": 62.89,
+      "wti_aud_cpl": 55.8
+    },
+    {
+      "date": "2026-02-15",
+      "wti_usd": 62.89,
+      "wti_aud_cpl": 55.8
+    },
+    {
+      "date": "2026-02-17",
+      "wti_usd": 62.33,
+      "wti_aud_cpl": 55.4
+    },
+    {
+      "date": "2026-02-18",
+      "wti_usd": 65.19,
+      "wti_aud_cpl": 57.9
+    },
+    {
+      "date": "2026-02-19",
+      "wti_usd": 66.43,
+      "wti_aud_cpl": 59.3
+    },
+    {
+      "date": "2026-02-20",
+      "wti_usd": 66.39,
+      "wti_aud_cpl": 59.2
+    },
+    {
+      "date": "2026-02-21",
+      "wti_usd": 66.39,
+      "wti_aud_cpl": 59.2
+    },
+    {
+      "date": "2026-02-22",
+      "wti_usd": 66.39,
+      "wti_aud_cpl": 59.2
+    },
+    {
+      "date": "2026-02-23",
+      "wti_usd": 66.31,
+      "wti_aud_cpl": 58.6
+    },
+    {
+      "date": "2026-02-24",
+      "wti_usd": 65.63,
+      "wti_aud_cpl": 58.5
+    },
+    {
+      "date": "2026-02-25",
+      "wti_usd": 65.42,
+      "wti_aud_cpl": 58.3
+    },
+    {
+      "date": "2026-02-26",
+      "wti_usd": 65.21,
+      "wti_aud_cpl": 57.6
+    },
+    {
+      "date": "2026-02-27",
+      "wti_usd": 67.02,
+      "wti_aud_cpl": 59.4
+    },
+    {
+      "date": "2026-02-28",
+      "wti_usd": 67.02,
+      "wti_aud_cpl": 59.4
+    },
+    {
+      "date": "2026-03-01",
+      "wti_usd": 67.02,
+      "wti_aud_cpl": 59.4
+    },
+    {
+      "date": "2026-03-02",
+      "wti_usd": 71.23,
+      "wti_aud_cpl": 63.5
+    },
+    {
+      "date": "2026-03-03",
+      "wti_usd": 74.56,
+      "wti_aud_cpl": 66.0
+    },
+    {
+      "date": "2026-03-04",
+      "wti_usd": 74.66,
+      "wti_aud_cpl": 66.7
+    },
+    {
+      "date": "2026-03-05",
+      "wti_usd": 81.01,
+      "wti_aud_cpl": 72.0
+    },
+    {
+      "date": "2026-03-06",
+      "wti_usd": 90.9,
+      "wti_aud_cpl": 81.5
+    },
+    {
+      "date": "2026-03-07",
+      "wti_usd": 90.9,
+      "wti_aud_cpl": 81.5
+    },
+    {
+      "date": "2026-03-08",
+      "wti_usd": 90.9,
+      "wti_aud_cpl": 81.5
+    },
+    {
+      "date": "2026-03-09",
+      "wti_usd": 94.77,
+      "wti_aud_cpl": 85.6
+    },
+    {
+      "date": "2026-03-10",
+      "wti_usd": 83.45,
+      "wti_aud_cpl": 74.3
+    },
+    {
+      "date": "2026-03-11",
+      "wti_usd": 87.25,
+      "wti_aud_cpl": 77.1
+    },
+    {
+      "date": "2026-03-12",
+      "wti_usd": 95.73,
+      "wti_aud_cpl": 84.5
+    },
+    {
+      "date": "2026-03-13",
+      "wti_usd": 98.71,
+      "wti_aud_cpl": 87.8
+    },
+    {
+      "date": "2026-03-14",
+      "wti_usd": 98.71,
+      "wti_aud_cpl": 87.8
+    },
+    {
+      "date": "2026-03-15",
+      "wti_usd": 98.71,
+      "wti_aud_cpl": 87.8
+    },
+    {
+      "date": "2026-03-16",
+      "wti_usd": 93.5,
+      "wti_aud_cpl": 83.9
+    },
+    {
+      "date": "2026-03-17",
+      "wti_usd": 96.21,
+      "wti_aud_cpl": 85.6
+    },
+    {
+      "date": "2026-03-18",
+      "wti_usd": 96.32,
+      "wti_aud_cpl": 85.2
+    },
+    {
+      "date": "2026-03-19",
+      "wti_usd": 96.14,
+      "wti_aud_cpl": 86.0
+    },
+    {
+      "date": "2026-03-20",
+      "wti_usd": 98.32,
+      "wti_aud_cpl": 87.3
+    },
+    {
+      "date": "2026-03-21",
+      "wti_usd": 98.32,
+      "wti_aud_cpl": 87.3
+    },
+    {
+      "date": "2026-03-22",
+      "wti_usd": 98.32,
+      "wti_aud_cpl": 87.3
+    },
+    {
+      "date": "2026-03-23",
+      "wti_usd": 88.13,
+      "wti_aud_cpl": 79.1
+    },
+    {
+      "date": "2026-03-24",
+      "wti_usd": 92.35,
+      "wti_aud_cpl": 82.9
+    },
+    {
+      "date": "2026-03-25",
+      "wti_usd": 90.32,
+      "wti_aud_cpl": 81.2
+    },
+    {
+      "date": "2026-03-26",
+      "wti_usd": 94.48,
+      "wti_aud_cpl": 85.6
+    },
+    {
+      "date": "2026-03-27",
+      "wti_usd": 95.08,
+      "wti_aud_cpl": 86.8
+    }
+  ],
+  "trajectory": [
+    {
+      "week": 0,
+      "projected_tgp": 297.0
+    },
+    {
+      "week": 1,
+      "projected_tgp": 278.7
+    },
+    {
+      "week": 2,
+      "projected_tgp": 267.4
+    },
+    {
+      "week": 3,
+      "projected_tgp": 263.1
+    },
+    {
+      "week": 4,
+      "projected_tgp": 255.2
+    },
+    {
+      "week": 5,
+      "projected_tgp": 246.6
+    },
+    {
+      "week": 6,
+      "projected_tgp": 243.7
+    },
+    {
+      "week": 7,
+      "projected_tgp": 238.2
+    },
+    {
+      "week": 8,
+      "projected_tgp": 238.7
+    }
+  ]
+}
