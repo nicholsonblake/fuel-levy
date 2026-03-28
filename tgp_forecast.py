@@ -81,8 +81,6 @@ EXCISE_SCHEDULE: list[tuple[str, float]] = [
     ("2026-02-01", 52.3),
 ]
 
-GST_RATE: float = 0.10
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
@@ -255,10 +253,10 @@ def engineer_features(market: pd.DataFrame, tgp: pd.DataFrame) -> pd.DataFrame:
     # Excise
     combined["excise"] = combined.index.map(get_excise_for_date)
 
-    # GST component (GST is on the total price, so GST = TGP * rate / (1 + rate))
-    combined["gst_component"] = (
-        combined["diesel_tgp"] * GST_RATE / (1 + GST_RATE)
-    )
+    # Ex-excise TGP: subtract the known deterministic excise component.
+    # This isolates the market-driven portion of TGP for regression,
+    # avoiding excise acting as a spurious time-trend proxy.
+    combined["tgp_ex_excise"] = combined["diesel_tgp"] - combined["excise"]
 
     # Lagged crude (for asymmetric analysis)
     combined["WTI_AUD_CPL_lag7"] = combined["WTI_AUD_CPL"].shift(7)
@@ -271,59 +269,228 @@ def engineer_features(market: pd.DataFrame, tgp: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# Cointegration testing
+# ---------------------------------------------------------------------------
+def engle_granger_test(y: pd.Series, X: pd.DataFrame) -> dict:
+    """
+    Engle-Granger two-step cointegration test.
+    Step 1: OLS on levels to get residuals.
+    Step 2: ADF test on residuals — if stationary, series are cointegrated.
+    Returns dict with test statistic, p-value, and the long-run OLS model.
+    """
+    from statsmodels.tsa.stattools import adfuller
+
+    # Step 1: long-run (levels) regression
+    X_const = sm.add_constant(X)
+    lr_model = sm.OLS(y, X_const).fit()
+    residuals = lr_model.resid
+
+    # Step 2: ADF on residuals (no constant — residuals are mean-zero by construction)
+    adf_result = adfuller(residuals, maxlag=None, regression="c", autolag="AIC")
+    adf_stat, adf_pvalue = adf_result[0], adf_result[1]
+
+    return {
+        "long_run_model": lr_model,
+        "residuals": residuals,
+        "adf_stat": float(adf_stat),
+        "adf_pvalue": float(adf_pvalue),
+        "cointegrated": adf_pvalue < 0.05,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Model training
 # ---------------------------------------------------------------------------
 def train_multifactor_model(
     data: pd.DataFrame,
 ) -> dict:
     """
-    Train OLS regression models:
-      1. Baseline: TGP ~ WTI_USD
-      2. FX-adjusted: TGP ~ WTI_AUD_CPL
-      3. Full: TGP ~ WTI_AUD_CPL + diesel_crack_aud_cpl + excise
-    Returns dict with model objects and diagnostics.
+    Train models on ex-excise TGP (excise subtracted as known deterministic):
+      1. Baseline: TGP ~ WTI_USD (levels, for comparison only)
+      2. FX-adjusted: TGP ~ WTI_AUD_CPL (levels, for comparison only)
+      3. Long-run: TGP_ex_excise ~ WTI_AUD_CPL + diesel_crack_aud_cpl
+      4. ECM: ΔTGP_ex_excise ~ EC_{t-1} + ΔWTI_AUD_CPL + Δcrack
+         where EC = residual from the long-run equation.
+
+    The ECM separates equilibrium (where TGP should be) from adjustment
+    speed (how fast it gets there), replacing the ad hoc trajectory logic.
     """
     results = {}
 
     # Weekly aggregation for model training (reduces autocorrelation noise)
     weekly = data.resample("W").last().dropna(
-        subset=["WTI_USD", "WTI_AUD_CPL", "diesel_tgp"]
+        subset=["WTI_USD", "WTI_AUD_CPL", "diesel_tgp", "tgp_ex_excise"]
     )
 
-    # Use 1-week lag: predict TGP from LAST week's inputs
+    if len(weekly) < 30:
+        raise ValueError(f"Insufficient data for model training ({len(weekly)} weeks)")
+
+    # ---- Legacy comparison models (levels, for R² reporting) ----
+    # Use 1-week lag for legacy models
     for col in ["WTI_USD", "WTI_AUD_CPL", "diesel_crack_aud_cpl", "excise", "AUDUSD"]:
         if col in weekly.columns:
             weekly[f"{col}_lag1"] = weekly[col].shift(1)
 
-    weekly = weekly.dropna()
+    weekly_clean = weekly.dropna()
 
-    if len(weekly) < 20:
-        raise ValueError(f"Insufficient data for model training ({len(weekly)} weeks)")
+    y_full = weekly_clean["diesel_tgp"]
+    X1 = sm.add_constant(weekly_clean["WTI_USD_lag1"])
+    results["baseline"] = sm.OLS(y_full, X1).fit()
 
-    # Model 1: Baseline (WTI USD only)
-    y = weekly["diesel_tgp"]
-    X1 = sm.add_constant(weekly["WTI_USD_lag1"])
-    m1 = sm.OLS(y, X1).fit()
-    results["baseline"] = m1
+    X2 = sm.add_constant(weekly_clean["WTI_AUD_CPL_lag1"])
+    results["fx_adjusted"] = sm.OLS(y_full, X2).fit()
 
-    # Model 2: FX-adjusted (WTI in AUD cpl)
-    X2 = sm.add_constant(weekly["WTI_AUD_CPL_lag1"])
-    m2 = sm.OLS(y, X2).fit()
-    results["fx_adjusted"] = m2
-
-    # Model 3: Full multi-factor
+    # Legacy "full" model (inc excise) kept for backwards compatibility
     factor_cols = ["WTI_AUD_CPL_lag1", "diesel_crack_aud_cpl_lag1", "excise_lag1"]
-    available = [c for c in factor_cols if c in weekly.columns]
-    X3 = sm.add_constant(weekly[available])
-    m3 = sm.OLS(y, X3).fit()
-    results["full"] = m3
+    available = [c for c in factor_cols if c in weekly_clean.columns]
+    X3 = sm.add_constant(weekly_clean[available])
+    results["full"] = sm.OLS(y_full, X3).fit()
+
+    # ---- Step 1: Long-run equation on ex-excise TGP (levels) ----
+    y_ex = weekly_clean["tgp_ex_excise"]
+    lr_cols = ["WTI_AUD_CPL"]
+    if "diesel_crack_aud_cpl" in weekly_clean.columns:
+        lr_cols.append("diesel_crack_aud_cpl")
+    X_lr = weekly_clean[lr_cols]
+
+    coint = engle_granger_test(y_ex, X_lr)
+    results["cointegration"] = coint
+    results["long_run"] = coint["long_run_model"]
+    log.info(
+        "Cointegration test: ADF stat=%.3f, p=%.4f, cointegrated=%s",
+        coint["adf_stat"], coint["adf_pvalue"], coint["cointegrated"],
+    )
+
+    # ---- Step 2: Error Correction Model ----
+    # EC term = lagged residual from long-run equation
+    weekly_clean = weekly_clean.copy()
+    weekly_clean["ec_term"] = coint["residuals"].shift(1)
+
+    # First differences
+    weekly_clean["d_tgp_ex"] = weekly_clean["tgp_ex_excise"].diff()
+    weekly_clean["d_wti_aud_cpl"] = weekly_clean["WTI_AUD_CPL"].diff()
+    if "diesel_crack_aud_cpl" in weekly_clean.columns:
+        weekly_clean["d_crack"] = weekly_clean["diesel_crack_aud_cpl"].diff()
+
+    ecm_data = weekly_clean.dropna(subset=["ec_term", "d_tgp_ex", "d_wti_aud_cpl"])
+
+    ecm_y = ecm_data["d_tgp_ex"]
+    ecm_x_cols = ["ec_term", "d_wti_aud_cpl"]
+    if "d_crack" in ecm_data.columns:
+        ecm_x_cols.append("d_crack")
+    ecm_X = sm.add_constant(ecm_data[ecm_x_cols])
+
+    ecm_model = sm.OLS(ecm_y, ecm_X).fit()
+    results["ecm"] = ecm_model
+
+    # The EC coefficient should be negative (error-correcting)
+    ec_coeff = float(ecm_model.params.get("ec_term", 0))
+    results["ec_speed"] = ec_coeff
+    log.info(
+        "ECM: EC coefficient=%.4f (negative = correcting), R²=%.4f",
+        ec_coeff, ecm_model.rsquared,
+    )
 
     # Store training metadata
-    results["weekly_data"] = weekly
-    results["n_weeks"] = len(weekly)
-    results["date_range"] = (weekly.index.min(), weekly.index.max())
+    results["weekly_data"] = weekly_clean
+    results["n_weeks"] = len(weekly_clean)
+    results["date_range"] = (weekly_clean.index.min(), weekly_clean.index.max())
+
+    # ---- Out-of-sample validation (last 26 weeks) ----
+    oos = out_of_sample_validation(weekly_clean, holdout_weeks=26)
+    results["oos_validation"] = oos
+    if oos:
+        log.info(
+            "OOS validation (26 weeks): MAE=%.2f, RMSE=%.2f, n=%d",
+            oos["mae"], oos["rmse"], oos["n"],
+        )
 
     return results
+
+
+# ---------------------------------------------------------------------------
+# Out-of-sample validation
+# ---------------------------------------------------------------------------
+OOS_HOLDOUT_WEEKS: int = 26
+
+
+def out_of_sample_validation(weekly: pd.DataFrame, holdout_weeks: int = OOS_HOLDOUT_WEEKS) -> dict:
+    """
+    Train on all-but-last-N weeks, predict the holdout, report MAE/RMSE.
+    Uses the long-run ex-excise model specification.
+    """
+    if len(weekly) < holdout_weeks + 30:
+        return {}
+
+    cutoff = len(weekly) - holdout_weeks
+    train = weekly.iloc[:cutoff]
+    test = weekly.iloc[cutoff:]
+
+    y_train = train["tgp_ex_excise"]
+    lr_cols = ["WTI_AUD_CPL"]
+    if "diesel_crack_aud_cpl" in train.columns:
+        lr_cols.append("diesel_crack_aud_cpl")
+    X_train = sm.add_constant(train[lr_cols])
+
+    model = sm.OLS(y_train, X_train).fit()
+
+    X_test = sm.add_constant(test[lr_cols])
+    predictions = model.predict(X_test)
+
+    # Add excise back for full TGP comparison
+    pred_tgp = predictions + test["excise"]
+    actual_tgp = test["diesel_tgp"]
+
+    errors = actual_tgp - pred_tgp
+    mae = float(errors.abs().mean())
+    rmse = float(np.sqrt((errors ** 2).mean()))
+    mape = float((errors.abs() / actual_tgp).mean() * 100)
+
+    return {
+        "mae": mae,
+        "rmse": rmse,
+        "mape": mape,
+        "n": len(test),
+        "holdout_start": str(test.index.min().date()),
+        "holdout_end": str(test.index.max().date()),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Model-based prediction intervals
+# ---------------------------------------------------------------------------
+def prediction_interval(model_results: dict, conditions: dict, alpha: float = 0.10) -> dict:
+    """
+    Compute model-based prediction interval for current conditions.
+    Uses statsmodels get_prediction() for proper interval estimation.
+    alpha=0.10 gives a 90% CI.
+    """
+    lr_model = model_results["long_run"]
+    param_names = list(lr_model.params.index)
+
+    x_dict = {
+        "const": 1,
+        "WTI_AUD_CPL": conditions["wti_aud_cpl"],
+        "diesel_crack_aud_cpl": conditions["diesel_crack_aud_cpl"],
+    }
+    x_vals = [x_dict.get(p, 0) for p in param_names]
+    x_df = pd.DataFrame([x_vals], columns=param_names)
+
+    pred = lr_model.get_prediction(x_df)
+    summary = pred.summary_frame(alpha=alpha)
+
+    excise = conditions["excise"]
+    point = float(summary["mean"].iloc[0]) + excise
+    ci_lower = float(summary["obs_ci_lower"].iloc[0]) + excise
+    ci_upper = float(summary["obs_ci_upper"].iloc[0]) + excise
+
+    return {
+        "point": round(point, 1),
+        "ci_lower": round(ci_lower, 1),
+        "ci_upper": round(ci_upper, 1),
+        "alpha": alpha,
+        "confidence": f"{(1 - alpha) * 100:.0f}%",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -398,26 +565,34 @@ def asymmetric_lag_analysis(data: pd.DataFrame) -> dict:
 def current_conditions(data: pd.DataFrame) -> dict:
     """Extract the latest available values for all inputs."""
     latest = data.dropna(subset=["WTI_USD", "AUDUSD"]).iloc[-1]
+    excise = float(latest["excise"])
+    tgp_actual = float(latest.get("diesel_tgp", 0))
     return {
         "date": str(latest.name.date()),
         "wti_usd": float(latest["WTI_USD"]),
         "audusd": float(latest["AUDUSD"]),
         "wti_aud_cpl": float(latest["WTI_AUD_CPL"]),
         "diesel_crack_aud_cpl": float(latest.get("diesel_crack_aud_cpl", 0)),
-        "excise": float(latest["excise"]),
-        "diesel_tgp_actual": float(latest.get("diesel_tgp", 0)),
+        "excise": excise,
+        "diesel_tgp_actual": tgp_actual,
+        "tgp_ex_excise": tgp_actual - excise,
     }
 
 
 def scenario_forecast(model_results: dict, conditions: dict) -> list[dict]:
     """
     Generate TGP forecasts under various crude / FX / margin scenarios.
-    Uses the full multi-factor model.
+    Uses the long-run model on ex-excise TGP, then adds current excise back.
     """
-    model = model_results["full"]
-    param_names = list(model.params.index)
+    lr_model = model_results["long_run"]
+    param_names = list(lr_model.params.index)
+    excise = conditions["excise"]
 
-    wti_scenarios = [65, 75, 85, 95, 101, 110, 120, 130]
+    # Snap WTI scenarios to nearest $5 around current, plus standard range
+    cur_wti = conditions["wti_usd"]
+    snapped = round(cur_wti / 5) * 5
+    wti_scenarios = sorted(set([65, 75, 85, 95, 110, 120, 130, snapped]))
+
     fx_scenarios = [0.56, 0.60, 0.64, 0.68, 0.72]
     crack_scenarios = [15, 25, 35]
 
@@ -429,17 +604,19 @@ def scenario_forecast(model_results: dict, conditions: dict) -> list[dict]:
                 wti_aud_cpl = wti_aud / BARREL_TO_LITRES * 100
                 crack_aud = crack_usd / audusd
                 crack_aud_cpl = crack_aud / BARREL_TO_LITRES * 100
-                excise = conditions["excise"]
 
-                # Build predictor vector matching model params
+                # Build predictor vector for long-run ex-excise model
                 x_dict = {
                     "const": 1,
-                    "WTI_AUD_CPL_lag1": wti_aud_cpl,
-                    "diesel_crack_aud_cpl_lag1": crack_aud_cpl,
-                    "excise_lag1": excise,
+                    "WTI_AUD_CPL": wti_aud_cpl,
+                    "diesel_crack_aud_cpl": crack_aud_cpl,
                 }
                 x_vals = [x_dict.get(p, 0) for p in param_names]
-                predicted_tgp = float(model.predict(pd.DataFrame([x_vals], columns=param_names))[0])
+                predicted_ex = float(lr_model.predict(
+                    pd.DataFrame([x_vals], columns=param_names)
+                )[0])
+                # Add excise back as known component
+                predicted_tgp = predicted_ex + excise
 
                 forecasts.append({
                     "wti_usd": wti_usd,
@@ -454,29 +631,43 @@ def scenario_forecast(model_results: dict, conditions: dict) -> list[dict]:
 
 def decompose_current_tgp(model_results: dict, conditions: dict) -> dict:
     """
-    Break down current diesel TGP into its component drivers
-    using the full model coefficients.
+    Break down current diesel TGP into its component drivers.
+
+    Uses the long-run model on ex-excise TGP, then adds excise back
+    as a known deterministic component. This avoids excise absorbing
+    trend residuals through a regression coefficient.
     """
-    model = model_results["full"]
-    params = model.params
+    lr_model = model_results["long_run"]
+    params = lr_model.params
 
     components = {}
     components["intercept"] = float(params.get("const", 0))
 
-    if "WTI_AUD_CPL_lag1" in params:
+    if "WTI_AUD_CPL" in params:
         components["crude_oil_aud"] = float(
-            params["WTI_AUD_CPL_lag1"] * conditions["wti_aud_cpl"]
+            params["WTI_AUD_CPL"] * conditions["wti_aud_cpl"]
         )
-    if "diesel_crack_aud_cpl_lag1" in params:
+    if "diesel_crack_aud_cpl" in params:
         components["refining_margin"] = float(
-            params["diesel_crack_aud_cpl_lag1"] * conditions["diesel_crack_aud_cpl"]
-        )
-    if "excise_lag1" in params:
-        components["excise"] = float(
-            params["excise_lag1"] * conditions["excise"]
+            params["diesel_crack_aud_cpl"] * conditions["diesel_crack_aud_cpl"]
         )
 
-    components["predicted_total"] = sum(components.values())
+    # Excise is a known component, not estimated
+    components["excise"] = conditions["excise"]
+
+    # Model RMSE for threshold calculations
+    rmse = float(np.sqrt(lr_model.mse_resid))
+    components["model_rmse"] = rmse
+
+    # Predicted = long-run ex-excise prediction + excise
+    predicted_ex_excise = components["intercept"]
+    if "crude_oil_aud" in components:
+        predicted_ex_excise += components["crude_oil_aud"]
+    if "refining_margin" in components:
+        predicted_ex_excise += components["refining_margin"]
+
+    components["predicted_ex_excise"] = predicted_ex_excise
+    components["predicted_total"] = predicted_ex_excise + conditions["excise"]
     components["actual_total"] = conditions["diesel_tgp_actual"]
     components["residual"] = (
         conditions["diesel_tgp_actual"] - components["predicted_total"]
@@ -512,7 +703,7 @@ def print_report(
     for name, label in [
         ("baseline", "Baseline (WTI USD only)"),
         ("fx_adjusted", "FX-adjusted (WTI AUD cpl)"),
-        ("full", "Full (crude AUD + crack + excise)"),
+        ("full", "Legacy full (crude AUD + crack + excise)"),
     ]:
         m = model_results[name]
         p(f"  {label}")
@@ -521,17 +712,48 @@ def print_report(
         p(f"    AIC:       {m.aic:.0f}")
         p("")
 
+    # Cointegration test
+    coint = model_results.get("cointegration", {})
+    p("  --- Cointegration (Engle-Granger) ---")
+    p(f"    ADF statistic: {coint.get('adf_stat', 0):.3f}")
+    p(f"    p-value:       {coint.get('adf_pvalue', 1):.4f}")
+    p(f"    Cointegrated:  {'YES' if coint.get('cointegrated') else 'NO'}")
+    p("")
+
+    # Long-run model (ex-excise)
+    lr = model_results["long_run"]
+    p("  Long-run model (ex-excise TGP ~ crude AUD + crack)")
+    p(f"    R-squared: {lr.rsquared:.4f}")
+    p(f"    Adj R-sq:  {lr.rsquared_adj:.4f}")
+    p(f"    RMSE:      {np.sqrt(lr.mse_resid):.2f} cpl")
+    p("")
+
+    # ECM
+    ecm = model_results.get("ecm")
+    if ecm is not None:
+        p("  Error Correction Model (weekly)")
+        p(f"    EC coefficient: {model_results.get('ec_speed', 0):.4f} (should be negative)")
+        p(f"    R-squared:      {ecm.rsquared:.4f}")
+        p("")
+
     p(f"  Training period: {model_results['date_range'][0].date()} to "
       f"{model_results['date_range'][1].date()} ({model_results['n_weeks']} weeks)")
 
-    # Full model coefficients
-    p("\n--- FULL MODEL COEFFICIENTS ---\n")
-    full = model_results["full"]
-    for param in full.params.index:
-        coef = full.params[param]
-        pval = full.pvalues[param]
+    # Long-run model coefficients
+    p("\n--- LONG-RUN MODEL COEFFICIENTS (ex-excise TGP) ---\n")
+    for param in lr.params.index:
+        coef = lr.params[param]
+        pval = lr.pvalues[param]
         sig = "***" if pval < 0.001 else "**" if pval < 0.01 else "*" if pval < 0.05 else ""
         p(f"  {param:<30} {coef:>10.4f}  (p={pval:.4f}) {sig}")
+
+    if ecm is not None:
+        p("\n--- ECM COEFFICIENTS ---\n")
+        for param in ecm.params.index:
+            coef = ecm.params[param]
+            pval = ecm.pvalues[param]
+            sig = "***" if pval < 0.001 else "**" if pval < 0.01 else "*" if pval < 0.05 else ""
+            p(f"  {param:<30} {coef:>10.4f}  (p={pval:.4f}) {sig}")
 
     # Current conditions
     p("\n--- CURRENT CONDITIONS ---\n")
@@ -546,12 +768,13 @@ def print_report(
     p("\n--- TGP DECOMPOSITION (what is driving each cent) ---\n")
     p(f"  Crude oil (AUD):     {decomposition.get('crude_oil_aud', 0):>8.1f} cpl")
     p(f"  Refining margin:     {decomposition.get('refining_margin', 0):>8.1f} cpl")
-    p(f"  Excise (model):      {decomposition.get('excise', 0):>8.1f} cpl")
+    p(f"  Excise (known):      {decomposition.get('excise', 0):>8.1f} cpl")
     p(f"  Intercept (base):    {decomposition.get('intercept', 0):>8.1f} cpl")
     p(f"  ---")
     p(f"  Model prediction:    {decomposition.get('predicted_total', 0):>8.1f} cpl")
     p(f"  Actual TGP:          {decomposition.get('actual_total', 0):>8.1f} cpl")
     p(f"  Residual:            {decomposition.get('residual', 0):>8.1f} cpl")
+    p(f"  Model RMSE:          {decomposition.get('model_rmse', 0):>8.1f} cpl")
 
     # Asymmetric analysis
     if "error" not in asymmetry:
@@ -591,7 +814,10 @@ def print_report(
     p(header)
     p("  " + "-" * 58)
 
-    for wti in [65, 75, 85, 95, 101, 110, 120, 130]:
+    cur_wti = conditions["wti_usd"]
+    snapped_wti = round(cur_wti / 5) * 5
+    wti_rows = sorted(set([65, 75, 85, 95, 110, 120, 130, snapped_wti]))
+    for wti in wti_rows:
         row = f"  ${wti:>6}"
         for fx in [0.56, 0.60, 0.64, 0.68, 0.72]:
             match = [
@@ -604,28 +830,32 @@ def print_report(
                 row += f"  {match[0]['predicted_diesel_tgp']:>7.0f}"
             else:
                 row += "      -"
-        # Mark current conditions row
-        if wti == 101:
-            row += "  <-- current crude"
+        if wti == snapped_wti:
+            row += "  <-- ~current crude"
         p(row)
 
-    # Directional forecast
+    # Directional forecast — threshold from model RMSE (1 standard deviation)
     p("\n--- DIRECTIONAL OUTLOOK ---\n")
     pred = decomposition.get("predicted_total", 0)
     actual = conditions["diesel_tgp_actual"]
     gap = actual - pred
+    rmse = decomposition.get("model_rmse", 15)
+    threshold = rmse  # 1σ — outside this is "significant"
 
-    if gap > 15:
-        p("  TGP is ABOVE model equilibrium by {:.0f} cpl.".format(gap))
+    p(f"  Signal threshold: {threshold:.0f} cpl (1x model RMSE)")
+    p("")
+
+    if gap > threshold:
+        p("  TGP is ABOVE model equilibrium by {:.0f} cpl (>{:.0f} cpl threshold).".format(gap, threshold))
         p("  This suggests TGP has overshot OR the model is missing a factor")
         p("  (e.g. acute supply disruption premium, further AUD weakness).")
-        p("  If crude and FX stabilise, expect TGP to DRIFT DOWN over 4-8 weeks.")
-    elif gap < -15:
-        p("  TGP is BELOW model equilibrium by {:.0f} cpl.".format(abs(gap)))
+        p("  If crude and FX stabilise, expect TGP to DRIFT DOWN.")
+    elif gap < -threshold:
+        p("  TGP is BELOW model equilibrium by {:.0f} cpl (>{:.0f} cpl threshold).".format(abs(gap), threshold))
         p("  TGP has NOT YET caught up to current inputs.")
-        p("  Expect TGP to RISE over the next 1-2 weeks even if crude is flat.")
+        p("  Expect TGP to RISE even if crude is flat.")
     else:
-        p("  TGP is near model equilibrium (within 15 cpl).")
+        p("  TGP is near model equilibrium (within {:.0f} cpl RMSE band).".format(threshold))
         p("  Future direction depends on crude, AUD/USD, and refining margins.")
 
     report = "\n".join(lines)
@@ -695,45 +925,64 @@ def compute_tgp_trajectory(
     decomposition: dict,
     asymmetry: dict,
     weeks: int = 8,
+    ec_speed: float | None = None,
 ) -> list[dict]:
     """
     Project where TGP is likely headed over the next N weeks,
     assuming crude and FX stay at current levels.
 
-    Uses the asymmetric pass-through curves to model how fast
-    TGP converges toward model equilibrium.
+    Uses the ECM error-correction coefficient to model convergence.
+    The EC coefficient tells us what fraction of the gap is closed
+    each week — this is the econometrically proper adjustment speed,
+    replacing the previous ad hoc impulse-response approach.
+
+    Fallback: if no ECM coefficient available, uses a simple
+    geometric decay based on asymmetric pass-through estimates.
     """
     actual = conditions["diesel_tgp_actual"]
     predicted = decomposition["predicted_total"]
     gap = actual - predicted
 
+    trajectory = [{"week": 0, "projected_tgp": round(actual, 1)}]
+
+    if abs(gap) < 1:
+        for w in range(1, weeks + 1):
+            trajectory.append({"week": w, "projected_tgp": round(predicted, 1)})
+        return trajectory
+
+    # ECM-based: each week, gap closes by |ec_speed| fraction
+    # ec_speed should be negative (error-correcting); use its absolute value
+    if ec_speed is not None and ec_speed < 0:
+        adj_rate = min(abs(ec_speed), 0.95)  # cap at 95% per week
+        remaining_gap = gap
+        current = actual
+        for w in range(1, weeks + 1):
+            correction = remaining_gap * adj_rate
+            current -= correction
+            remaining_gap -= correction
+            trajectory.append({"week": w, "projected_tgp": round(current, 1)})
+        return trajectory
+
+    # Fallback: use asymmetric pass-through curves (legacy behaviour)
     cum_up = asymmetry.get("cum_up", [])
     cum_down = asymmetry.get("cum_down", [])
 
-    trajectory = []
-    for w in range(weeks + 1):
-        if abs(gap) < 1:
-            # Already at equilibrium
-            trajectory.append({"week": w, "projected_tgp": round(predicted, 1)})
-        elif gap > 0:
-            # TGP above equilibrium — expect decline (use fall curve)
+    for w in range(1, weeks + 1):
+        if gap > 0:
             if cum_down and w < len(cum_down):
-                # Normalise cum_down to get fraction of gap closed
                 total = abs(cum_down[-1]) if abs(cum_down[-1]) > 0 else 1
                 frac = abs(cum_down[w]) / total
             else:
                 frac = min(w / 5.0, 1.0)
             projected = actual - gap * frac
-            trajectory.append({"week": w, "projected_tgp": round(projected, 1)})
         else:
-            # TGP below equilibrium — expect rise (use rise curve)
             if cum_up and w < len(cum_up):
                 total = cum_up[-1] if cum_up[-1] > 0 else 1
                 frac = cum_up[w] / total
             else:
                 frac = min(w / 1.5, 1.0)
             projected = actual + abs(gap) * frac
-            trajectory.append({"week": w, "projected_tgp": round(projected, 1)})
+        trajectory.append({"week": w, "projected_tgp": round(projected, 1)})
 
     return trajectory
 
@@ -749,7 +998,9 @@ def save_latest_json(
     FORECAST_DIR.mkdir(exist_ok=True)
     path = FORECAST_DIR / "latest.json"
 
-    full_model = model_results["full"]
+    lr_model = model_results["long_run"]
+    ecm_model = model_results.get("ecm")
+    coint = model_results.get("cointegration", {})
 
     # Build WTI history for charting (last 120 days)
     wti_history = []
@@ -763,9 +1014,10 @@ def save_latest_json(
                 "wti_aud_cpl": round(float(row.get("WTI_AUD_CPL", 0)), 1),
             })
 
-    # Compute TGP trajectory projection
+    # Compute TGP trajectory projection using ECM adjustment speed
     trajectory = compute_tgp_trajectory(
-        conditions, decomposition, asymmetry
+        conditions, decomposition, asymmetry,
+        ec_speed=model_results.get("ec_speed"),
     )
 
     output = {
@@ -776,12 +1028,21 @@ def save_latest_json(
             for k, v in decomposition.items()
         },
         "model": {
-            "r_squared": round(full_model.rsquared, 4),
-            "r_squared_adj": round(full_model.rsquared_adj, 4),
-            "rmse": round(float(np.sqrt(full_model.mse_resid)), 2),
+            "r_squared": round(lr_model.rsquared, 4),
+            "r_squared_adj": round(lr_model.rsquared_adj, 4),
+            "rmse": round(float(np.sqrt(lr_model.mse_resid)), 2),
             "coefficients": {
-                k: round(v, 6) for k, v in full_model.params.to_dict().items()
+                k: round(v, 6) for k, v in lr_model.params.to_dict().items()
             },
+        },
+        "cointegration": {
+            "adf_stat": round(coint.get("adf_stat", 0), 4),
+            "adf_pvalue": round(coint.get("adf_pvalue", 1), 4),
+            "cointegrated": coint.get("cointegrated", False),
+        },
+        "ecm": {
+            "ec_speed": round(model_results.get("ec_speed", 0), 4),
+            "r_squared": round(ecm_model.rsquared, 4) if ecm_model else None,
         },
         "asymmetry": {
             "weeks_90pct_rise": asymmetry.get("weeks_90pct_up"),
@@ -791,9 +1052,17 @@ def save_latest_json(
             "cum_up": [round(v, 4) for v in asymmetry.get("cum_up", [])],
             "cum_down": [round(v, 4) for v in asymmetry.get("cum_down", [])],
         },
+        "oos_validation": model_results.get("oos_validation", {}),
         "wti_history": wti_history,
         "trajectory": trajectory,
     }
+
+    # Add prediction interval if conditions are available
+    try:
+        pi = prediction_interval(model_results, conditions)
+        output["prediction_interval"] = pi
+    except Exception:
+        pass
 
     with open(path, "w") as f:
         json.dump(output, f, indent=2)
@@ -837,6 +1106,10 @@ def main() -> None:
     # Step 8: Scenario forecasts
     forecasts = scenario_forecast(model_results, conditions)
 
+    # Step 8b: Model-based prediction interval
+    pred_interval = prediction_interval(model_results, conditions)
+    log.info("90%% CI: %.0f - %.0f cpl", pred_interval["ci_lower"], pred_interval["ci_upper"])
+
     # Step 9: Output
     report = print_report(model_results, conditions, decomposition, asymmetry, forecasts)
 
@@ -847,7 +1120,7 @@ def main() -> None:
             "conditions": conditions,
             "predicted_tgp": decomposition["predicted_total"],
             "actual_tgp": conditions["diesel_tgp_actual"],
-            "r_squared": model_results["full"].rsquared,
+            "r_squared": model_results["long_run"].rsquared,
         }, indent=2))
     else:
         print(report)
@@ -858,7 +1131,10 @@ def main() -> None:
     save_latest_json(conditions, decomposition, asymmetry, model_results, combined)
 
     # Log trajectory projections for future accuracy tracking
-    trajectory = compute_tgp_trajectory(conditions, decomposition, asymmetry)
+    trajectory = compute_tgp_trajectory(
+        conditions, decomposition, asymmetry,
+        ec_speed=model_results.get("ec_speed"),
+    )
     _save_trajectory_log(conditions, trajectory)
 
     # Save report text
