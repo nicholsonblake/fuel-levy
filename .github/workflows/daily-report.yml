@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   generate:
@@ -34,22 +34,35 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # --- Fuel Levy Report (existing) ---
+      # --- Fuel Levy Report (core — must succeed) ---
       - name: Backfill history
         run: python fuel_levy.py backfill
 
       - name: Generate HTML report
         run: python fuel_levy.py report --no-open
 
-      # --- TGP Forecast Model (new) ---
+      # --- TGP Forecast Model (market-data dependent — allowed to fail) ---
+      # These steps depend on external APIs (AIP, yfinance). If they fail
+      # due to rate limiting, downtime, or weekend data gaps, the pipeline
+      # continues and deploys the existing forecast report from the last
+      # successful run.
       - name: Update TGP history from AIP
+        id: tgp_update
+        continue-on-error: true
         run: python update_tgp_history.py
 
       - name: Run TGP forecast model
+        id: forecast
+        continue-on-error: true
         run: python tgp_forecast.py
 
       - name: Generate forecast dashboard
+        continue-on-error: true
         run: python forecast_report.py
+
+      - name: Report forecast status
+        if: steps.forecast.outcome == 'failure'
+        run: echo "::warning::Forecast model failed (likely API issue). Deploying with last successful forecast."
 
       # --- Commit and deploy ---
       - name: Commit updated data

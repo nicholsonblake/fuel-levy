@@ -104,21 +104,28 @@ def fetch_yfinance_data(start_date: str) -> pd.DataFrame:
 
     for name, ticker in tickers.items():
         log.info("Fetching %s (%s)...", name, ticker)
-        try:
-            df = yf.download(ticker, start=start_date, progress=False, auto_adjust=True)
-            if df.empty:
-                log.warning("No data for %s", ticker)
-                continue
-            # yfinance returns MultiIndex columns when single ticker; flatten
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-            series = df["Close"].copy()
-            series.name = name
-            # Flatten timezone-aware index to date-only
-            series.index = series.index.tz_localize(None) if series.index.tz else series.index
-            frames[name] = series
-        except Exception as exc:
-            log.error("Failed to fetch %s: %s", ticker, exc)
+        for attempt in range(1, 4):
+            try:
+                df = yf.download(ticker, start=start_date, progress=False, auto_adjust=True)
+                if df.empty:
+                    log.warning("No data for %s (attempt %d)", ticker, attempt)
+                    if attempt < 3:
+                        import time; time.sleep(2 ** attempt)
+                        continue
+                    break
+                # yfinance returns MultiIndex columns when single ticker; flatten
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = df.columns.get_level_values(0)
+                series = df["Close"].copy()
+                series.name = name
+                # Flatten timezone-aware index to date-only
+                series.index = series.index.tz_localize(None) if series.index.tz else series.index
+                frames[name] = series
+                break
+            except Exception as exc:
+                log.error("Failed to fetch %s (attempt %d): %s", ticker, attempt, exc)
+                if attempt < 3:
+                    import time; time.sleep(2 ** attempt)
 
     if not frames:
         raise RuntimeError("Could not fetch any market data from yfinance")
