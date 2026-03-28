@@ -801,15 +801,17 @@ def generate_html(data):
     except Exception:
         history = pd.DataFrame()
 
-    # Week-on-week
+    # Week-on-week (by calendar date, not row position)
     wow = 0.0
-    if len(history) > 7:
-        wa = history["diesel_tgp"].iloc[-8]
-        wow = actual - wa
-        wow_pct = wow / wa * 100 if wa else 0
-        wow_html = f'<span style="color:{"#ef4444" if wow > 0 else "#22c55e"};font-weight:600">{"+" if wow >= 0 else ""}{wow:.1f} cpl</span> <span style="color:#94a3b8">({wow_pct:+.1f}%) vs 7 days ago</span>'
-    else:
-        wow_html = ""
+    wow_html = ""
+    if not history.empty:
+        target = history.index.max() - pd.Timedelta(days=7)
+        mask = history.index <= target
+        if mask.any():
+            wa = history.loc[mask, "diesel_tgp"].iloc[-1]
+            wow = actual - wa
+            wow_pct = wow / wa * 100 if wa else 0
+            wow_html = f'<span style="color:{"#ef4444" if wow > 0 else "#22c55e"};font-weight:600">{"+" if wow >= 0 else ""}{wow:.1f} cpl</span> <span style="color:#94a3b8">({wow_pct:+.1f}%) vs 7 days ago</span>'
 
     # Direction — threshold from model RMSE (1σ)
     if residual > threshold:
