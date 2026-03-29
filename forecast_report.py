@@ -42,6 +42,20 @@ def load_latest():
     return data
 
 
+def _immediate_pct(asym: dict, key: str) -> int:
+    """Compute week-0 pass-through as % of total from cumulative array."""
+    cum = asym.get(key, [])
+    if not cum or cum[-1] == 0:
+        return 0
+    return round(cum[0] / abs(cum[-1]) * 100)
+
+
+def _asym_weeks(asym: dict, direction: str, default=None):
+    """Get weeks to pass-through, checking both 75pct and 90pct keys."""
+    return asym.get(f"weeks_75pct_{direction}",
+                    asym.get(f"weeks_90pct_{direction}", default))
+
+
 def load_tgp_history(days=120):
     path = DATA_DIR / "diesel_tgp_history.csv"
     df = pd.read_csv(path, parse_dates=["date"]).set_index("date").sort_index()
@@ -739,10 +753,10 @@ def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_
 
     # Pass-through speed context
     if residual > threshold:
-        fall_weeks = asym.get("weeks_90pct_fall", 5)
+        fall_weeks = _asym_weeks(asym, "fall", 5)
         parts.append(f"prices are sticky on the way down (falls take ~{fall_weeks} weeks to flow through)")
     elif residual < -threshold:
-        rise_weeks = asym.get("weeks_90pct_rise", 1)
+        rise_weeks = _asym_weeks(asym, "rise", 1)
         parts.append(f"expect prices to catch up quickly (~{rise_weeks} week)")
 
     # Medium-term direction — find when TGP reaches within 1 RMSE of equilibrium
@@ -821,7 +835,7 @@ def generate_html(data):
     if residual > threshold:
         dir_icon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4l8 8h-5v8h-6v-8H4l8-8z" fill="#ef4444" transform="rotate(180 12 12)"/></svg>'
         dir_label = "Expect decline"
-        fall_weeks = asym.get("weeks_90pct_fall", 5)
+        fall_weeks = _asym_weeks(asym, "fall", 5)
         dir_detail = f"TGP is {residual:.0f} cpl above equilibrium. As the lag unwinds, TGP should drift down over ~{fall_weeks} weeks."
         dir_color = "#fef2f2"
         dir_border = "#fecaca"
@@ -938,8 +952,8 @@ def generate_html(data):
             )
 
         # Stickiness explanation
-        rise_weeks = asym.get("weeks_90pct_rise", "?")
-        fall_weeks = asym.get("weeks_90pct_fall", "?")
+        rise_weeks = _asym_weeks(asym, "rise", "?")
+        fall_weeks = _asym_weeks(asym, "fall", "?")
         if residual > threshold:
             sticky_note = f"TGP is sticky on the way down &mdash; falls take ~{fall_weeks} weeks to pass through."
         elif residual < -threshold:
@@ -1207,7 +1221,7 @@ def generate_html(data):
           <span style="font-size:12px;color:#94a3b8">90% confidence band</span>
         </div>
         <div style="font-size:11px;color:#94a3b8;margin-top:8px">
-          Rises flow through in ~{asym.get("weeks_90pct_rise", "?")} week(s), falls in ~{asym.get("weeks_90pct_fall", "?")} weeks.
+          Rises flow through in ~{_asym_weeks(asym, "rise", "?")} week(s), falls in ~{_asym_weeks(asym, "fall", "?")} weeks.
         </div>
       </div>
     </div>
@@ -1251,12 +1265,14 @@ def generate_html(data):
         <div class="card-desc">How fast crude oil changes flow through to TGP</div>
         <div class="asym-grid">
           <div class="asym-pill" style="background:#fff7ed">
-            <div class="asym-num" style="color:#f97316">{asym.get("weeks_90pct_rise", "?")}</div>
-            <div class="asym-unit" style="color:#f97316">Week to rise</div>
+            <div class="asym-num" style="color:#f97316">{_asym_weeks(asym, "rise", "?")}</div>
+            <div class="asym-unit" style="color:#f97316">Weeks to rise (75%)</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">{_immediate_pct(asym, "cum_up")}% in week 1</div>
           </div>
           <div class="asym-pill" style="background:#eef2ff">
-            <div class="asym-num" style="color:#6366f1">{asym.get("weeks_90pct_fall", "?")}</div>
-            <div class="asym-unit" style="color:#6366f1">Weeks to fall</div>
+            <div class="asym-num" style="color:#6366f1">{_asym_weeks(asym, "fall", "?")}</div>
+            <div class="asym-unit" style="color:#6366f1">Weeks to fall (75%)</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">{_immediate_pct(asym, "cum_down")}% in week 1</div>
           </div>
         </div>
       </div>

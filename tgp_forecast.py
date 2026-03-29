@@ -577,15 +577,15 @@ def asymmetric_lag_analysis(data: pd.DataFrame) -> dict:
     cum_up = _cumulative_impulse(beta_up, gamma_up, delta, max_weeks)
     cum_down = _cumulative_impulse(beta_down, gamma_down, delta, max_weeks)
 
-    # Weeks to 90% pass-through
+    # Weeks to 75% pass-through (better differentiates asymmetry than 90%)
     total_up = cum_up[-1] if cum_up[-1] != 0 else 1
     total_down = cum_down[-1] if cum_down[-1] != 0 else 1
 
-    weeks_90_up = next(
-        (i for i, v in enumerate(cum_up) if v >= 0.9 * total_up), max_weeks - 1
+    weeks_75_up = next(
+        (i for i, v in enumerate(cum_up) if v >= 0.75 * total_up), max_weeks - 1
     )
-    weeks_90_down = next(
-        (i for i, v in enumerate(cum_down) if abs(v) >= 0.9 * abs(total_down)),
+    weeks_75_down = next(
+        (i for i, v in enumerate(cum_down) if abs(v) >= 0.75 * abs(total_down)),
         max_weeks - 1,
     )
 
@@ -600,8 +600,10 @@ def asymmetric_lag_analysis(data: pd.DataFrame) -> dict:
         "cum_down": cum_down,
         "total_up_passthrough": float(total_up),
         "total_down_passthrough": float(total_down),
-        "weeks_90pct_up": weeks_90_up,
-        "weeks_90pct_down": weeks_90_down,
+        "weeks_75pct_up": weeks_75_up,
+        "weeks_75pct_down": weeks_75_down,
+        "immediate_up_pct": round(cum_up[0] / total_up * 100) if total_up else 0,
+        "immediate_down_pct": round(cum_down[0] / abs(total_down) * 100) if total_down else 0,
         "r_squared": model.rsquared,
         "n_params": len(model.params),
         "n_obs": len(weekly),
@@ -859,8 +861,10 @@ def print_report(
         p(f"  R-squared of asymmetric model: {asymmetry['r_squared']:.4f}")
         p(f"  Total up pass-through:   {asymmetry['total_up_passthrough']:.2f} cpl per 1 cpl crude rise")
         p(f"  Total down pass-through: {asymmetry['total_down_passthrough']:.2f} cpl per 1 cpl crude fall")
-        p(f"  Weeks to 90% pass-through (RISE):  {asymmetry['weeks_90pct_up']}")
-        p(f"  Weeks to 90% pass-through (FALL):  {asymmetry['weeks_90pct_down']}")
+        p(f"  Weeks to 75% pass-through (RISE):  {asymmetry['weeks_75pct_up']}")
+        p(f"  Weeks to 75% pass-through (FALL):  {asymmetry['weeks_75pct_down']}")
+        p(f"  Immediate pass-through (RISE):     {asymmetry['immediate_up_pct']}%")
+        p(f"  Immediate pass-through (FALL):     {asymmetry['immediate_down_pct']}%")
         p("")
         p("  Cumulative response to 1 cpl crude INCREASE:")
         for i, v in enumerate(asymmetry["cum_up"]):
@@ -1127,8 +1131,10 @@ def save_latest_json(
             "r_squared": round(ecm_model.rsquared, 4) if ecm_model else None,
         },
         "asymmetry": {
-            "weeks_90pct_rise": asymmetry.get("weeks_90pct_up"),
-            "weeks_90pct_fall": asymmetry.get("weeks_90pct_down"),
+            "weeks_75pct_rise": asymmetry.get("weeks_75pct_up"),
+            "weeks_75pct_fall": asymmetry.get("weeks_75pct_down"),
+            "immediate_rise_pct": asymmetry.get("immediate_up_pct", 0),
+            "immediate_fall_pct": asymmetry.get("immediate_down_pct", 0),
             "total_up_passthrough": round(asymmetry.get("total_up_passthrough", 0), 4),
             "total_down_passthrough": round(asymmetry.get("total_down_passthrough", 0), 4),
             "cum_up": [round(v, 4) for v in asymmetry.get("cum_up", [])],
