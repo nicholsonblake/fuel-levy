@@ -41,8 +41,10 @@
     "r_squared": 0.3319
   },
   "asymmetry": {
-    "weeks_90pct_rise": 2,
-    "weeks_90pct_fall": 2,
+    "weeks_75pct_rise": 1,
+    "weeks_75pct_fall": 2,
+    "immediate_rise_pct": 45,
+    "immediate_fall_pct": 13,
     "total_up_passthrough": 1.0,
     "total_down_passthrough": 1.0,
     "cum_up": [
@@ -69,9 +71,9 @@
     ]
   },
   "oos_validation": {
-    "mae": 10.00474320536415,
-    "rmse": 17.043408052752085,
-    "mape": 4.723045592369108,
+    "mae": 10.00474320536408,
+    "rmse": 17.043408052752003,
+    "mape": 4.723045592369073,
     "n": 26,
     "holdout_start": "2025-10-05",
     "holdout_end": "2026-03-29"

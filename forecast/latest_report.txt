@@ -76,8 +76,10 @@
   R-squared of asymmetric model: 0.5014
   Total up pass-through:   1.00 cpl per 1 cpl crude rise
   Total down pass-through: 1.00 cpl per 1 cpl crude fall
-  Weeks to 90% pass-through (RISE):  2
-  Weeks to 90% pass-through (FALL):  2
+  Weeks to 75% pass-through (RISE):  1
+  Weeks to 75% pass-through (FALL):  2
+  Immediate pass-through (RISE):     45%
+  Immediate pass-through (FALL):     13%
 
   Cumulative response to 1 cpl crude INCREASE:
     Week 0:   0.45 cpl  ##
