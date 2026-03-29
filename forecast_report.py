@@ -50,6 +50,44 @@ def _immediate_pct(asym: dict, key: str) -> int:
     return round(cum[0] / abs(cum[-1]) * 100)
 
 
+def _passthrough_speed_visual(asym: dict) -> str:
+    """Build a visual comparison of rise vs fall pass-through speed."""
+    up_pct = _immediate_pct(asym, "cum_up")
+    down_pct = _immediate_pct(asym, "cum_down")
+    # Ratio text
+    if down_pct > 0:
+        ratio = up_pct / down_pct
+        ratio_text = f"Rises pass through <b>{ratio:.1f}×</b> faster than falls in week 1"
+    else:
+        ratio_text = "Falls show negligible immediate pass-through"
+
+    rise_weeks = _asym_weeks(asym, "rise", "?")
+    fall_weeks = _asym_weeks(asym, "fall", "?")
+
+    return f"""
+        <div style="margin-top:12px">
+          <div style="margin-bottom:12px;font-size:13px;color:#475569;line-height:1.5">
+            {ratio_text}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="width:70px;font-size:12px;color:#f97316;font-weight:600">Rises</span>
+            <div style="flex:1;background:#fed7aa;border-radius:6px;height:22px;position:relative">
+              <div style="width:{up_pct}%;background:#f97316;height:100%;border-radius:6px;min-width:2px"></div>
+              <span style="position:absolute;right:6px;top:2px;font-size:11px;color:#9a3412;font-weight:600">{up_pct}% in week 1</span>
+            </div>
+            <span style="width:55px;font-size:11px;color:#94a3b8;text-align:right">75% by W{rise_weeks}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:70px;font-size:12px;color:#6366f1;font-weight:600">Falls</span>
+            <div style="flex:1;background:#c7d2fe;border-radius:6px;height:22px;position:relative">
+              <div style="width:{down_pct}%;background:#6366f1;height:100%;border-radius:6px;min-width:2px"></div>
+              <span style="position:absolute;right:6px;top:2px;font-size:11px;color:#312e81;font-weight:600">{down_pct}% in week 1</span>
+            </div>
+            <span style="width:55px;font-size:11px;color:#94a3b8;text-align:right">75% by W{fall_weeks}</span>
+          </div>
+        </div>"""
+
+
 def _asym_weeks(asym: dict, direction: str, default=None):
     """Get weeks to pass-through, checking both 75pct and 90pct keys."""
     return asym.get(f"weeks_75pct_{direction}",
@@ -1221,7 +1259,7 @@ def generate_html(data):
           <span style="font-size:12px;color:#94a3b8">90% confidence band</span>
         </div>
         <div style="font-size:11px;color:#94a3b8;margin-top:8px">
-          Rises flow through in ~{_asym_weeks(asym, "rise", "?")} week(s), falls in ~{_asym_weeks(asym, "fall", "?")} weeks.
+          Rises pass through {_immediate_pct(asym, "cum_up")}% in week 1 vs {_immediate_pct(asym, "cum_down")}% for falls.
         </div>
       </div>
     </div>
@@ -1262,19 +1300,8 @@ def generate_html(data):
 
       <div style="margin-top:24px">
         <div class="card-title" style="font-size:13px">Pass-Through Speed</div>
-        <div class="card-desc">How fast crude oil changes flow through to TGP</div>
-        <div class="asym-grid">
-          <div class="asym-pill" style="background:#fff7ed">
-            <div class="asym-num" style="color:#f97316">{_asym_weeks(asym, "rise", "?")}</div>
-            <div class="asym-unit" style="color:#f97316">Weeks to rise (75%)</div>
-            <div style="font-size:11px;color:#94a3b8;margin-top:4px">{_immediate_pct(asym, "cum_up")}% in week 1</div>
-          </div>
-          <div class="asym-pill" style="background:#eef2ff">
-            <div class="asym-num" style="color:#6366f1">{_asym_weeks(asym, "fall", "?")}</div>
-            <div class="asym-unit" style="color:#6366f1">Weeks to fall (75%)</div>
-            <div style="font-size:11px;color:#94a3b8;margin-top:4px">{_immediate_pct(asym, "cum_down")}% in week 1</div>
-          </div>
-        </div>
+        <div class="card-desc">How fast a 1 cpl crude change flows into TGP</div>
+        {_passthrough_speed_visual(asym)}
       </div>
     </div>
   </div>
