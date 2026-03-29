@@ -34,7 +34,7 @@ def load_latest():
         log.error("Corrupt forecast data in %s: %s — skipping dashboard generation", path, exc)
         sys.exit(0)
     # Sanity check: ensure the JSON has expected top-level keys
-    required = {"conditions", "decomposition", "scenarios"}
+    required = {"conditions", "decomposition"}
     missing = required - set(data.keys())
     if missing:
         log.error("Forecast data missing keys %s — skipping dashboard generation", missing)
