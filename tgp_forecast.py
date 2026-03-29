@@ -302,7 +302,7 @@ def engle_granger_test(y: pd.Series, X: pd.DataFrame) -> dict:
         "residuals": residuals,
         "adf_stat": float(adf_stat),
         "adf_pvalue": float(adf_pvalue),
-        "cointegrated": adf_pvalue < 0.05,
+        "cointegrated": bool(adf_pvalue < 0.05),
     }
 
 
@@ -1146,11 +1146,12 @@ def save_latest_json(
     except Exception:
         pass
 
-    # Atomic write: write to temp file then rename, so a concurrent
-    # cancellation can never leave a truncated latest.json on disk.
+    # Atomic write: serialize fully in memory first, then write + rename.
+    # This prevents partial writes from both serialization errors and
+    # process cancellation.
     tmp_path = path.with_suffix(".tmp")
-    with open(tmp_path, "w") as f:
-        json.dump(output, f, indent=2)
+    json_str = json.dumps(output, indent=2, default=str)
+    tmp_path.write_text(json_str)
     tmp_path.replace(path)
     log.info("Saved latest.json to %s", path)
 
