@@ -7,11 +7,15 @@ Outputs to reports/forecast.html (deployed via GitHub Pages).
 
 import csv
 import json
+import logging
 import math
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
+
+log = logging.getLogger("forecast_report")
 
 FORECAST_DIR = Path(__file__).parent / "forecast"
 DATA_DIR = Path(__file__).parent / "data"
@@ -19,8 +23,23 @@ REPORT_DIR = Path(__file__).parent / "reports"
 
 
 def load_latest():
-    with open(FORECAST_DIR / "latest.json") as f:
-        return json.load(f)
+    path = FORECAST_DIR / "latest.json"
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        log.error("Forecast data not found: %s — skipping dashboard generation", path)
+        sys.exit(0)
+    except (json.JSONDecodeError, ValueError) as exc:
+        log.error("Corrupt forecast data in %s: %s — skipping dashboard generation", path, exc)
+        sys.exit(0)
+    # Sanity check: ensure the JSON has expected top-level keys
+    required = {"conditions", "decomposition", "scenarios"}
+    missing = required - set(data.keys())
+    if missing:
+        log.error("Forecast data missing keys %s — skipping dashboard generation", missing)
+        sys.exit(0)
+    return data
 
 
 def load_tgp_history(days=120):
@@ -782,15 +801,17 @@ def generate_html(data):
     except Exception:
         history = pd.DataFrame()
 
-    # Week-on-week
+    # Week-on-week (by calendar date, not row position)
     wow = 0.0
-    if len(history) > 7:
-        wa = history["diesel_tgp"].iloc[-8]
-        wow = actual - wa
-        wow_pct = wow / wa * 100 if wa else 0
-        wow_html = f'<span style="color:{"#ef4444" if wow > 0 else "#22c55e"};font-weight:600">{"+" if wow >= 0 else ""}{wow:.1f} cpl</span> <span style="color:#94a3b8">({wow_pct:+.1f}%) vs 7 days ago</span>'
-    else:
-        wow_html = ""
+    wow_html = ""
+    if not history.empty:
+        target = history.index.max() - pd.Timedelta(days=7)
+        mask = history.index <= target
+        if mask.any():
+            wa = history.loc[mask, "diesel_tgp"].iloc[-1]
+            wow = actual - wa
+            wow_pct = wow / wa * 100 if wa else 0
+            wow_html = f'<span style="color:{"#ef4444" if wow > 0 else "#22c55e"};font-weight:600">{"+" if wow >= 0 else ""}{wow:.1f} cpl</span> <span style="color:#94a3b8">({wow_pct:+.1f}%) vs 7 days ago</span>'
 
     # Direction — threshold from model RMSE (1σ)
     if residual > threshold:
