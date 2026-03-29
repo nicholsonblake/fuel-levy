@@ -999,11 +999,28 @@ def generate_html(data):
         else:
             sticky_note = "TGP is near equilibrium. Direction depends on crude and FX moves."
 
+        # Volatility warning when crude is moving fast
+        vol_warning = ""
+        if len(wti_hist) >= 8:
+            wti_4w = [h["wti_usd"] for h in wti_hist[-28:]]
+            if len(wti_4w) >= 2:
+                wti_4w_chg = (wti_4w[-1] - wti_4w[0]) / wti_4w[0] * 100
+                if abs(wti_4w_chg) > 10:
+                    vol_warning = (
+                        f'<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;'
+                        f'border-radius:6px;font-size:11px;color:#92400e;line-height:1.5">'
+                        f'⚠️ <b>High crude volatility</b> — WTI has moved {wti_4w_chg:+.0f}% over the last 4 weeks. '
+                        f'Forecasts assume crude holds at ${cond["wti_usd"]:.0f}/bbl. '
+                        f'If crude continues to move, actual TGP will diverge from these projections.'
+                        f'</div>'
+                    )
+
         next_day_html = (
             f'<div style="font-size:12px;margin-top:6px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">'
             f'<div style="font-weight:600;color:#1e293b;margin-bottom:6px">Price Outlook</div>'
             f'{outlook_rows}'
             f'<div style="color:#94a3b8;font-size:11px;margin-top:8px;font-style:italic">{sticky_note}</div>'
+            f'{vol_warning}'
             f'</div>'
         )
 
