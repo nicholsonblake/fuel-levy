@@ -3,10 +3,8 @@ name: Daily Fuel Levy Report
 on:
   schedule:
     # AEST = UTC+10, AEDT (Oct-Apr) = UTC+11
-    # Hourly during Aus business hours: 8am-6pm AEST = 22:00-08:00 UTC
-    # Runs Mon-Fri (Sun-Thu night UTC + Mon-Fri morning UTC)
-    - cron: '0 22-23 * * 0-4'  # 8am-9am AEST (Sun-Thu UTC)
-    - cron: '0 0-8 * * 1-5'    # 10am-6pm AEST (Mon-Fri UTC)
+    # Runs every day at 1:00 UTC (11am/12pm AEST/AEDT)
+    - cron: '0 1 * * *'
   push:
     branches: [master]
     paths-ignore: ['history/**', 'data/**', 'forecast/**']
