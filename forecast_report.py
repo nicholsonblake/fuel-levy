@@ -936,6 +936,29 @@ def generate_html(data):
             f'({wti_delta_pct:+.1f}%) vs 7 days ago</div>'
         )
 
+    # WTI momentum indicator (5-day vs 20-day MA)
+    wti_momentum_html = ""
+    if len(wti_hist) >= 20:
+        wti_prices = [h["wti_usd"] for h in wti_hist]
+        ma5 = sum(wti_prices[-5:]) / 5
+        ma20 = sum(wti_prices[-20:]) / 20
+        momentum = (ma5 / ma20 - 1) * 100
+        if momentum > 3:
+            mom_label, mom_color, mom_icon = "Accelerating", "#ef4444", "↗"
+        elif momentum > 0:
+            mom_label, mom_color, mom_icon = "Rising", "#f97316", "↗"
+        elif momentum > -3:
+            mom_label, mom_color, mom_icon = "Falling", "#22c55e", "↘"
+        else:
+            mom_label, mom_color, mom_icon = "Decelerating", "#16a34a", "↘"
+        wti_momentum_html = (
+            f'<div style="font-size:11px;margin-top:2px;margin-bottom:4px;display:flex;align-items:center;gap:6px">'
+            f'<span style="color:#94a3b8">Trend</span>'
+            f'<span style="color:{mom_color};font-weight:600">{mom_icon} {mom_label}</span>'
+            f'<span style="color:#94a3b8">(5d MA ${ma5:.0f} vs 20d MA ${ma20:.0f})</span>'
+            f'</div>'
+        )
+
     # Executive summary
     exec_summary = exec_summary_forecast(
         actual, predicted, residual,
@@ -967,9 +990,19 @@ def generate_html(data):
                 f'</div>'
             )
 
+        # --- Regime-aware CI: widen confidence intervals when volatility is high ---
+        wti_4w_chg_pct = 0.0
+        if len(wti_hist) >= 28:
+            wti_4w = [h["wti_usd"] for h in wti_hist[-28:]]
+            wti_4w_chg_pct = (wti_4w[-1] - wti_4w[0]) / wti_4w[0] * 100
+        elif len(wti_hist) >= 2:
+            wti_4w_chg_pct = (wti_hist[-1]["wti_usd"] - wti_hist[0]["wti_usd"]) / wti_hist[0]["wti_usd"] * 100
+
+        # Scale CI by volatility: if crude moved >10% in 4w, multiply CI width
+        vol_multiplier = max(1.0, abs(wti_4w_chg_pct) / 10.0) if abs(wti_4w_chg_pct) > 10 else 1.0
+
         if week1_est is not None:
-            # Scale RMSE for 1-week uncertainty
-            w1_half = 1.645 * rmse / (4 ** 0.5)  # ~sqrt(weeks) scaling from weekly RMSE
+            w1_half = 1.645 * rmse / (4 ** 0.5) * vol_multiplier
             outlook_rows += (
                 f'<div style="display:flex;gap:6px;align-items:baseline;margin-top:4px">'
                 f'<span style="color:#64748b;width:100px;flex-shrink:0">1 week</span>'
@@ -977,10 +1010,8 @@ def generate_html(data):
                 f'<span style="color:#94a3b8;font-size:11px">90% CI: {week1_est - w1_half:.0f}&ndash;{week1_est + w1_half:.0f}</span>'
                 f'</div>'
             )
-
         if week8_est is not None:
-            # 8-week CI is wider — scale by sqrt(8)
-            w8_half = 1.645 * rmse * (8 ** 0.5) / (4 ** 0.5)
+            w8_half = 1.645 * rmse * (8 ** 0.5) / (4 ** 0.5) * vol_multiplier
             outlook_rows += (
                 f'<div style="display:flex;gap:6px;align-items:baseline;margin-top:4px">'
                 f'<span style="color:#64748b;width:100px;flex-shrink:0">8 weeks</span>'
@@ -988,6 +1019,49 @@ def generate_html(data):
                 f'<span style="color:#94a3b8;font-size:11px">90% CI: {week8_est - w8_half:.0f}&ndash;{week8_est + w8_half:.0f}</span>'
                 f'</div>'
             )
+
+        # --- Conditional forecasts: what if crude moves ±$15? ---
+        sc_path_cond = FORECAST_DIR / "scenarios.csv"
+        cond_html = ""
+        if sc_path_cond.exists():
+            sc_df = pd.read_csv(sc_path_cond)
+            cur_wti = cond["wti_usd"]
+            cur_fx = cond["audusd"]
+            # Find closest crack spread
+            avail_cracks = sorted(sc_df["crack_spread_usd"].unique())
+            cur_crack = cond.get("diesel_crack_aud_cpl", 25)
+            best_crack = min(avail_cracks, key=lambda c: abs(c - cur_crack)) if avail_cracks else 25
+            sc_sub = sc_df[sc_df["crack_spread_usd"] == best_crack]
+            # Find closest FX
+            if not sc_sub.empty:
+                avail_fx = sorted(sc_sub["audusd"].unique())
+                best_fx = min(avail_fx, key=lambda f: abs(f - cur_fx))
+                sc_fx = sc_sub[sc_sub["audusd"] == best_fx]
+                # Pick WTI -15, current, +15
+                scenarios = []
+                for delta, label, color in [(-15, "falls $15", "#22c55e"), (0, "holds", "#64748b"), (15, "rises $15", "#ef4444")]:
+                    target_wti = round(cur_wti + delta)
+                    closest = sc_fx.iloc[(sc_fx["wti_usd"] - target_wti).abs().argsort()[:1]]
+                    if not closest.empty:
+                        tgp_val = closest["predicted_diesel_tgp"].values[0]
+                        scenarios.append((f"${target_wti}/bbl", label, tgp_val, color))
+                if scenarios:
+                    rows = ""
+                    for wti_label, desc, tgp_val, color in scenarios:
+                        rows += (
+                            f'<div style="display:flex;justify-content:space-between;padding:3px 0;'
+                            f'border-bottom:1px solid #f1f5f9">'
+                            f'<span style="color:{color};font-weight:500">If WTI {desc} ({wti_label})</span>'
+                            f'<span style="color:#1e293b;font-weight:600">{tgp_val:.0f} cpl</span>'
+                            f'</div>'
+                        )
+                    cond_html = (
+                        f'<div style="margin-top:10px;padding:8px 10px;background:#f0f9ff;'
+                        f'border:1px solid #bae6fd;border-radius:6px;font-size:11px;line-height:1.8">'
+                        f'<div style="font-weight:600;color:#0c4a6e;margin-bottom:4px">If crude moves...</div>'
+                        f'{rows}'
+                        f'</div>'
+                    )
 
         # Stickiness explanation
         rise_weeks = _asym_weeks(asym, "rise", "?")
@@ -1001,24 +1075,21 @@ def generate_html(data):
 
         # Volatility warning when crude is moving fast
         vol_warning = ""
-        if len(wti_hist) >= 8:
-            wti_4w = [h["wti_usd"] for h in wti_hist[-28:]]
-            if len(wti_4w) >= 2:
-                wti_4w_chg = (wti_4w[-1] - wti_4w[0]) / wti_4w[0] * 100
-                if abs(wti_4w_chg) > 10:
-                    vol_warning = (
-                        f'<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;'
-                        f'border-radius:6px;font-size:11px;color:#92400e;line-height:1.5">'
-                        f'⚠️ <b>High crude volatility</b> — WTI has moved {wti_4w_chg:+.0f}% over the last 4 weeks. '
-                        f'Forecasts assume crude holds at ${cond["wti_usd"]:.0f}/bbl. '
-                        f'If crude continues to move, actual TGP will diverge from these projections.'
-                        f'</div>'
-                    )
+        if abs(wti_4w_chg_pct) > 10:
+            vol_warning = (
+                f'<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;'
+                f'border-radius:6px;font-size:11px;color:#92400e;line-height:1.5">'
+                f'⚠️ <b>High crude volatility</b> — WTI has moved {wti_4w_chg_pct:+.0f}% over the last 4 weeks. '
+                f'Forecasts assume crude holds at ${cond["wti_usd"]:.0f}/bbl. '
+                f'Confidence intervals have been widened to reflect elevated uncertainty.'
+                f'</div>'
+            )
 
         next_day_html = (
             f'<div style="font-size:12px;margin-top:6px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">'
             f'<div style="font-weight:600;color:#1e293b;margin-bottom:6px">Price Outlook</div>'
             f'{outlook_rows}'
+            f'{cond_html}'
             f'<div style="color:#94a3b8;font-size:11px;margin-top:8px;font-style:italic">{sticky_note}</div>'
             f'{vol_warning}'
             f'</div>'
@@ -1190,7 +1261,7 @@ def generate_html(data):
       <span class="badge" style="background:{"#f0fdf4;color:#16a34a" if coint.get("cointegrated") else "#fef2f2;color:#dc2626"}">{"Yes" if coint.get("cointegrated") else "No"} (p={coint.get("adf_pvalue", 1):.3f})</span>
       {"&middot; OOS MAE <span class='badge' style='background:#f0fdf4;color:#16a34a'>" + f'{oos["mae"]:.0f} cpl</span>' if oos.get("mae") else ""}
     </div>
-    <div class="top-meta">Auto-updated weekdays at 11am AEST &middot; ECM with ex-excise specification</div>
+    <div class="top-meta">Auto-updated daily at 11am AEST &middot; ECM with ex-excise specification</div>
   </div>
 </div>
 
@@ -1298,6 +1369,7 @@ def generate_html(data):
         <span class="input-value">${cond["wti_usd"]:.2f} USD/bbl</span>
       </div>
       {wti_wow_html}
+      {wti_momentum_html}
       <div class="input-row">
         <span class="input-label">AUD / USD</span>
         <span class="input-value">{cond["audusd"]:.4f}</span>
