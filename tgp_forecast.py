@@ -1146,8 +1146,12 @@ def save_latest_json(
     except Exception:
         pass
 
-    with open(path, "w") as f:
+    # Atomic write: write to temp file then rename, so a concurrent
+    # cancellation can never leave a truncated latest.json on disk.
+    tmp_path = path.with_suffix(".tmp")
+    with open(tmp_path, "w") as f:
         json.dump(output, f, indent=2)
+    tmp_path.replace(path)
     log.info("Saved latest.json to %s", path)
 
 
