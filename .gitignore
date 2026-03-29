@@ -3,3 +3,4 @@ __pycache__/
 reports/fuel-levy-*.html
 history.csv
 .env
+forecast/*.tmp
