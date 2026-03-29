@@ -745,14 +745,18 @@ def exec_summary_forecast(actual, predicted, residual, wow_cpl, trajectory, wti_
         rise_weeks = asym.get("weeks_90pct_rise", 1)
         parts.append(f"expect prices to catch up quickly (~{rise_weeks} week)")
 
-    # Medium-term direction
+    # Medium-term direction — find when TGP reaches within 1 RMSE of equilibrium
     if trajectory and len(trajectory) > 1:
         end_tgp = trajectory[-1]["projected_tgp"]
-        weeks = trajectory[-1]["week"]
+        converge_week = trajectory[-1]["week"]
+        for pt in trajectory:
+            if abs(pt["projected_tgp"] - predicted) <= threshold:
+                converge_week = pt["week"]
+                break
         if residual > threshold:
-            parts.append(f"projected to ease toward {end_tgp:.0f} cpl over {weeks} weeks")
+            parts.append(f"projected to ease toward {end_tgp:.0f} cpl over ~{converge_week} weeks")
         elif residual < -threshold:
-            parts.append(f"projected to rise toward {end_tgp:.0f} cpl over {weeks} weeks")
+            parts.append(f"projected to rise toward {end_tgp:.0f} cpl over ~{converge_week} weeks")
 
     # WTI context
     parts.append(f"WTI crude at ${wti_usd:.0f}/bbl")
@@ -817,7 +821,8 @@ def generate_html(data):
     if residual > threshold:
         dir_icon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 4l8 8h-5v8h-6v-8H4l8-8z" fill="#ef4444" transform="rotate(180 12 12)"/></svg>'
         dir_label = "Expect decline"
-        dir_detail = f"TGP is {residual:.0f} cpl above equilibrium (&gt;{threshold:.0f} cpl RMSE threshold). As the lag unwinds, TGP should drift down over {asym.get('weeks_90pct_fall', 5)} weeks."
+        fall_weeks = asym.get("weeks_90pct_fall", 5)
+        dir_detail = f"TGP is {residual:.0f} cpl above equilibrium. As the lag unwinds, TGP should drift down over ~{fall_weeks} weeks."
         dir_color = "#fef2f2"
         dir_border = "#fecaca"
     elif residual < -threshold:
