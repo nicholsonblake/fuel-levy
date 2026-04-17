@@ -79,7 +79,9 @@ EXCISE_SCHEDULE: list[tuple[str, float]] = [
     ("2024-08-01", 50.6),
     ("2025-02-01", 51.1),
     ("2025-08-01", 51.8),
-    ("2026-02-01", 52.3),
+    ("2026-02-01", 52.6),
+    ("2026-04-01", 26.3),   # Three-month halving (1 Apr - 30 Jun 2026)
+    ("2026-07-01", 52.6),   # Reverts to full rate + any indexation
 ]
 
 logging.basicConfig(
