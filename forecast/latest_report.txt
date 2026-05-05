@@ -1,74 +1,74 @@
 ========================================================================
   TGP MULTI-FACTOR FORECAST MODEL
-  Run date: 2026-05-04
-  Latest market data: 2026-05-04
+  Run date: 2026-05-05
+  Latest market data: 2026-05-05
 ========================================================================
 
 --- MODEL COMPARISON ---
 
   Baseline (WTI USD only)
-    R-squared: 0.7264
-    Adj R-sq:  0.7259
-    AIC:       4521
+    R-squared: 0.7258
+    Adj R-sq:  0.7253
+    AIC:       4513
 
   FX-adjusted (WTI AUD cpl)
-    R-squared: 0.8346
-    Adj R-sq:  0.8343
-    AIC:       4259
+    R-squared: 0.8342
+    Adj R-sq:  0.8339
+    AIC:       4252
 
   Legacy full (crude AUD + crack + excise)
-    R-squared: 0.9554
-    Adj R-sq:  0.9551
-    AIC:       3580
+    R-squared: 0.9553
+    Adj R-sq:  0.9550
+    AIC:       3574
 
   --- Cointegration (Engle-Granger) ---
-    ADF statistic: -4.713
-    p-value:       0.0001
+    ADF statistic: -4.899
+    p-value:       0.0000
     Cointegrated:  YES
 
   Long-run model (ex-excise TGP ~ crude AUD + crack)
-    R-squared: 0.9318
-    Adj R-sq:  0.9316
-    RMSE:      8.99 cpl
+    R-squared: 0.9317
+    Adj R-sq:  0.9315
+    RMSE:      9.00 cpl
 
   Error Correction Model (weekly)
-    EC coefficient: -0.4068 (should be negative)
-    R-squared:      0.3825
+    EC coefficient: -0.4067 (should be negative)
+    R-squared:      0.3822
 
-  Training period: 2016-05-22 to 2026-05-10 (521 weeks)
+  Training period: 2016-05-29 to 2026-05-10 (520 weeks)
 
 --- LONG-RUN MODEL COEFFICIENTS (ex-excise TGP) ---
 
-  const                              8.5421  (p=0.0000) ***
-  WTI_AUD_CPL                        1.1787  (p=0.0000) ***
-  diesel_crack_aud_cpl               1.0618  (p=0.0000) ***
+  const                              8.6099  (p=0.0000) ***
+  WTI_AUD_CPL                        1.1780  (p=0.0000) ***
+  diesel_crack_aud_cpl               1.0605  (p=0.0000) ***
 
 --- ECM COEFFICIENTS ---
 
-  const                              0.1758  (p=0.4009) 
-  ec_term                           -0.4068  (p=0.0000) ***
-  d_wti_aud_cpl                      0.1525  (p=0.0173) *
+  const                              0.1742  (p=0.4062) 
+  ec_term                           -0.4067  (p=0.0000) ***
+  d_wti_aud_cpl                      0.1527  (p=0.0173) *
   d_crack                            0.1872  (p=0.0001) ***
 
 --- CURRENT CONDITIONS ---
 
-  WTI Crude:       $101.66 USD/bbl
-  AUD/USD:         0.7211
-  WTI in AUD:      88.7 cpl
-  Diesel crack:    55.0 cpl (AUD)
+  WTI Crude:       $104.35 USD/bbl
+  AUD/USD:         0.7158
+  WTI in AUD:      91.7 cpl
+  Diesel crack:    56.6 cpl (AUD)
   Excise:          52.3 cpl
-  Actual TGP:      229.0 cpl
+  Actual TGP:      228.6 cpl
 
 --- TGP DECOMPOSITION (what is driving each cent) ---
 
-  Crude oil (AUD):        104.5 cpl
-  Refining margin:         58.4 cpl
+  Crude oil (AUD):        108.0 cpl
+  Refining margin:         60.1 cpl
   Excise (known):          52.3 cpl
-  Intercept (base):         8.5 cpl
+  Intercept (base):         8.6 cpl
   ---
-  Model prediction:       223.8 cpl
-  Actual TGP:             229.0 cpl
-  Residual:                 5.2 cpl
+  Model prediction:       229.0 cpl
+  Actual TGP:             228.6 cpl
+  Residual:                -0.4 cpl
   Model RMSE:               9.0 cpl
 
 --- ASYMMETRIC PASS-THROUGH (rockets and feathers) ---
@@ -105,18 +105,18 @@
 
 --- SCENARIO FORECASTS (Diesel TGP, cpl) ---
 
-  Using crack spread = $35/bbl (current conditions: ~$55 AUD/bbl equiv)
+  Using crack spread = $35/bbl (current conditions: ~$57 AUD/bbl equiv)
 
    WTI USD  AUD 0.56  AUD 0.60  AUD 0.64  AUD 0.68  AUD 0.72
   ----------------------------------------------------------
   $    65      -      -      -      -      -
-  $    75      -      -      -      -      -
-  $    85      -      -      -      -      -
-  $    95      -      -      -      -      -
-  $   100      -      -      213      204      196  <-- ~current crude
-  $   110      -      -      225      215      207
-  $   120      -      -      236      226      217
-  $   130      -      -      248      237      227
+  $    75      -      -      184      177      170
+  $    85      -      -      196      188      181
+  $    95      -      -      207      199      191
+  $   105      -      -      219      210      201  <-- ~current crude
+  $   110      -      -      -      -      -
+  $   120      -      -      -      -      -
+  $   130      -      -      -      -      -
 
 --- DIRECTIONAL OUTLOOK ---
 
