@@ -1,55 +1,55 @@
 {
-  "run_date": "2026-05-11",
+  "run_date": "2026-05-12",
   "conditions": {
-    "date": "2026-05-11",
-    "wti_usd": 100.16999816894531,
-    "audusd": 0.7228567600250244,
-    "wti_aud_cpl": 87.16132115952672,
-    "diesel_crack_aud_cpl": 60.373385582709204,
+    "date": "2026-05-12",
+    "wti_usd": 98.94000244140625,
+    "audusd": 0.7237984538078308,
+    "wti_aud_cpl": 85.9790517828161,
+    "diesel_crack_aud_cpl": 60.097208022219995,
     "excise": 52.3,
-    "diesel_tgp_actual": 212.64,
-    "tgp_ex_excise": 160.33999999999997
+    "diesel_tgp_actual": 208.99,
+    "tgp_ex_excise": 156.69
   },
   "decomposition": {
-    "intercept": 8.69,
-    "crude_oil_aud": 102.74,
-    "refining_margin": 63.66,
+    "intercept": 8.7,
+    "crude_oil_aud": 101.37,
+    "refining_margin": 63.31,
     "excise": 52.3,
-    "model_rmse": 9.01,
-    "predicted_ex_excise": 175.09,
-    "predicted_total": 227.39,
-    "actual_total": 212.64,
-    "residual": -14.75
+    "model_rmse": 9.03,
+    "predicted_ex_excise": 173.38,
+    "predicted_total": 225.68,
+    "actual_total": 208.99,
+    "residual": -16.69
   },
   "model": {
-    "r_squared": 0.9316,
-    "r_squared_adj": 0.9313,
-    "rmse": 9.01,
+    "r_squared": 0.9313,
+    "r_squared_adj": 0.931,
+    "rmse": 9.03,
     "coefficients": {
-      "const": 8.686477,
-      "WTI_AUD_CPL": 1.178726,
-      "diesel_crack_aud_cpl": 1.054478
+      "const": 8.696018,
+      "WTI_AUD_CPL": 1.178959,
+      "diesel_crack_aud_cpl": 1.053531
     }
   },
   "cointegration": {
-    "adf_stat": -5.2353,
+    "adf_stat": -5.2972,
     "adf_pvalue": 0.0,
     "cointegrated": true
   },
   "ecm": {
-    "ec_speed": -0.4059,
-    "r_squared": 0.3785
+    "ec_speed": -0.4056,
+    "r_squared": 0.3768
   },
   "asymmetry": {
     "weeks_75pct_rise": 1,
     "weeks_75pct_fall": 3,
-    "immediate_rise_pct": 49,
-    "immediate_fall_pct": -7,
+    "immediate_rise_pct": 50,
+    "immediate_fall_pct": -8,
     "total_up_passthrough": 1.0,
     "total_down_passthrough": 1.0,
     "cum_up": [
-      0.4938,
-      0.8459,
+      0.4966,
+      0.8492,
       1.0,
       1.0,
       1.0,
@@ -59,10 +59,10 @@
       1.0
     ],
     "cum_down": [
-      -0.0733,
-      0.3266,
-      0.7111,
-      0.9398,
+      -0.076,
+      0.3242,
+      0.7104,
+      0.9407,
       1.0,
       1.0,
       1.0,
@@ -71,19 +71,14 @@
     ]
   },
   "oos_validation": {
-    "mae": 18.160921360045624,
-    "rmse": 31.226394816304243,
-    "mape": 7.241500065987355,
+    "mae": 18.237850749128253,
+    "rmse": 31.25576487755857,
+    "mape": 7.281147461102486,
     "n": 26,
     "holdout_start": "2025-11-23",
     "holdout_end": "2026-05-17"
   },
   "wti_history": [
-    {
-      "date": "2026-01-11",
-      "wti_usd": 59.12,
-      "wti_aud_cpl": 55.5
-    },
     {
       "date": "2026-01-12",
       "wti_usd": 59.5,
@@ -656,70 +651,75 @@
     },
     {
       "date": "2026-05-11",
-      "wti_usd": 100.17,
-      "wti_aud_cpl": 87.2
+      "wti_usd": 98.07,
+      "wti_aud_cpl": 85.2
+    },
+    {
+      "date": "2026-05-12",
+      "wti_usd": 98.94,
+      "wti_aud_cpl": 86.0
     }
   ],
   "trajectory": [
     {
       "week": 0,
-      "projected_tgp": 212.6,
-      "ci_lower": 205.2,
-      "ci_upper": 220.1
+      "projected_tgp": 209.0,
+      "ci_lower": 201.6,
+      "ci_upper": 216.4
     },
     {
       "week": 1,
-      "projected_tgp": 218.6,
-      "ci_lower": 211.2,
-      "ci_upper": 226.0
+      "projected_tgp": 215.8,
+      "ci_lower": 208.3,
+      "ci_upper": 223.2
     },
     {
       "week": 2,
-      "projected_tgp": 222.2,
-      "ci_lower": 211.7,
-      "ci_upper": 232.7
+      "projected_tgp": 219.8,
+      "ci_lower": 209.3,
+      "ci_upper": 230.3
     },
     {
       "week": 3,
-      "projected_tgp": 224.3,
-      "ci_lower": 211.5,
-      "ci_upper": 237.1
+      "projected_tgp": 222.2,
+      "ci_lower": 209.3,
+      "ci_upper": 235.0
     },
     {
       "week": 4,
-      "projected_tgp": 225.6,
-      "ci_lower": 210.7,
-      "ci_upper": 240.4
+      "projected_tgp": 223.6,
+      "ci_lower": 208.7,
+      "ci_upper": 238.4
     },
     {
       "week": 5,
-      "projected_tgp": 226.3,
-      "ci_lower": 209.7,
-      "ci_upper": 242.9
+      "projected_tgp": 224.4,
+      "ci_lower": 207.8,
+      "ci_upper": 241.0
     },
     {
       "week": 6,
-      "projected_tgp": 226.7,
-      "ci_lower": 208.6,
-      "ci_upper": 244.9
+      "projected_tgp": 224.9,
+      "ci_lower": 206.7,
+      "ci_upper": 243.1
     },
     {
       "week": 7,
-      "projected_tgp": 227.0,
-      "ci_lower": 207.4,
-      "ci_upper": 246.6
+      "projected_tgp": 225.2,
+      "ci_lower": 205.6,
+      "ci_upper": 244.9
     },
     {
       "week": 8,
-      "projected_tgp": 227.2,
-      "ci_lower": 206.2,
-      "ci_upper": 248.1
+      "projected_tgp": 225.4,
+      "ci_lower": 204.4,
+      "ci_upper": 246.4
     }
   ],
   "prediction_interval": {
-    "point": 227.4,
-    "ci_lower": 212.4,
-    "ci_upper": 242.3,
+    "point": 225.7,
+    "ci_lower": 210.7,
+    "ci_upper": 240.6,
     "alpha": 0.1,
     "confidence": "90%"
   }
