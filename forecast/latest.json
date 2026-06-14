@@ -1,44 +1,44 @@
 {
-  "run_date": "2026-06-13",
+  "run_date": "2026-06-14",
   "conditions": {
     "date": "2026-06-12",
     "wti_usd": 84.87999725341797,
     "audusd": 0.7047901749610901,
     "wti_aud_cpl": 75.75022045645454,
-    "diesel_crack_aud_cpl": 51.8549965928498,
+    "diesel_crack_aud_cpl": 50.33695169375538,
     "excise": 52.3,
     "diesel_tgp_actual": 192.48,
     "tgp_ex_excise": 140.18
   },
   "decomposition": {
     "intercept": 8.92,
-    "crude_oil_aud": 89.35,
-    "refining_margin": 53.88,
+    "crude_oil_aud": 89.32,
+    "refining_margin": 52.35,
     "excise": 52.3,
-    "model_rmse": 9.14,
-    "predicted_ex_excise": 152.15,
-    "predicted_total": 204.45,
+    "model_rmse": 9.13,
+    "predicted_ex_excise": 150.59,
+    "predicted_total": 202.89,
     "actual_total": 192.48,
-    "residual": -11.97
+    "residual": -10.41
   },
   "model": {
-    "r_squared": 0.9298,
-    "r_squared_adj": 0.9295,
-    "rmse": 9.14,
+    "r_squared": 0.9299,
+    "r_squared_adj": 0.9296,
+    "rmse": 9.13,
     "coefficients": {
-      "const": 8.918481,
-      "WTI_AUD_CPL": 1.179526,
-      "diesel_crack_aud_cpl": 1.0391
+      "const": 8.922325,
+      "WTI_AUD_CPL": 1.179152,
+      "diesel_crack_aud_cpl": 1.03992
     }
   },
   "cointegration": {
-    "adf_stat": -9.381,
+    "adf_stat": -9.3994,
     "adf_pvalue": 0.0,
     "cointegrated": true
   },
   "ecm": {
-    "ec_speed": -0.3947,
-    "r_squared": 0.3598
+    "ec_speed": -0.395,
+    "r_squared": 0.36
   },
   "asymmetry": {
     "weeks_75pct_rise": 1,
@@ -48,9 +48,9 @@
     "total_up_passthrough": 1.0,
     "total_down_passthrough": 1.0,
     "cum_up": [
-      0.4305,
+      0.4304,
       0.7798,
-      0.9697,
+      0.9698,
       1.0,
       1.0,
       1.0,
@@ -59,10 +59,10 @@
       1.0
     ],
     "cum_down": [
-      0.0035,
-      0.399,
-      0.7556,
-      0.9594,
+      0.0036,
+      0.3986,
+      0.755,
+      0.9589,
       1.0,
       1.0,
       1.0,
@@ -71,9 +71,9 @@
     ]
   },
   "oos_validation": {
-    "mae": 18.981245707973528,
-    "rmse": 31.47877771946738,
-    "mape": 7.5995373145587255,
+    "mae": 18.92750676074659,
+    "rmse": 31.46493996674671,
+    "mape": 7.571618077636996,
     "n": 26,
     "holdout_start": "2025-12-21",
     "holdout_end": "2026-06-14"
@@ -669,57 +669,57 @@
     },
     {
       "week": 1,
-      "projected_tgp": 197.2,
-      "ci_lower": 189.7,
-      "ci_upper": 204.7
+      "projected_tgp": 196.6,
+      "ci_lower": 189.1,
+      "ci_upper": 204.1
     },
     {
       "week": 2,
-      "projected_tgp": 200.1,
-      "ci_lower": 189.4,
-      "ci_upper": 210.7
+      "projected_tgp": 199.1,
+      "ci_lower": 188.5,
+      "ci_upper": 209.7
     },
     {
       "week": 3,
-      "projected_tgp": 201.8,
-      "ci_lower": 188.8,
-      "ci_upper": 214.8
+      "projected_tgp": 200.6,
+      "ci_lower": 187.6,
+      "ci_upper": 213.6
     },
     {
       "week": 4,
-      "projected_tgp": 202.8,
-      "ci_lower": 187.8,
-      "ci_upper": 217.9
+      "projected_tgp": 201.5,
+      "ci_lower": 186.5,
+      "ci_upper": 216.5
     },
     {
       "week": 5,
-      "projected_tgp": 203.5,
-      "ci_lower": 186.7,
-      "ci_upper": 220.3
+      "projected_tgp": 202.0,
+      "ci_lower": 185.2,
+      "ci_upper": 218.8
     },
     {
       "week": 6,
-      "projected_tgp": 203.9,
-      "ci_lower": 185.5,
-      "ci_upper": 222.3
+      "projected_tgp": 202.4,
+      "ci_lower": 184.0,
+      "ci_upper": 220.8
     },
     {
       "week": 7,
-      "projected_tgp": 204.1,
-      "ci_lower": 184.2,
-      "ci_upper": 224.0
+      "projected_tgp": 202.6,
+      "ci_lower": 182.7,
+      "ci_upper": 222.5
     },
     {
       "week": 8,
-      "projected_tgp": 204.2,
-      "ci_lower": 183.0,
-      "ci_upper": 225.5
+      "projected_tgp": 202.7,
+      "ci_lower": 181.5,
+      "ci_upper": 224.0
     }
   ],
   "prediction_interval": {
-    "point": 204.5,
-    "ci_lower": 189.3,
-    "ci_upper": 219.6,
+    "point": 202.9,
+    "ci_lower": 187.8,
+    "ci_upper": 218.0,
     "alpha": 0.1,
     "confidence": "90%"
   }
