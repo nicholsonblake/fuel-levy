@@ -1,6 +1,6 @@
 ========================================================================
   TGP MULTI-FACTOR FORECAST MODEL
-  Run date: 2026-06-20
+  Run date: 2026-06-21
   Latest market data: 2026-06-19
 ========================================================================
 
@@ -85,23 +85,23 @@
     Week 0:   0.42 cpl  ##
     Week 1:   0.77 cpl  ###
     Week 2:   0.96 cpl  ####
-    Week 3:   1.00 cpl  #####
-    Week 4:   1.00 cpl  #####
-    Week 5:   1.00 cpl  #####
-    Week 6:   1.00 cpl  #####
-    Week 7:   1.00 cpl  #####
-    Week 8:   1.00 cpl  #####
+    Week 3:   1.00 cpl  ####
+    Week 4:   1.00 cpl  ####
+    Week 5:   1.00 cpl  ####
+    Week 6:   1.00 cpl  ####
+    Week 7:   1.00 cpl  ####
+    Week 8:   1.00 cpl  ####
 
   Cumulative response to 1 cpl crude DECREASE:
     Week 0:   0.07 cpl  
     Week 1:   0.45 cpl  ##
     Week 2:   0.77 cpl  ###
     Week 3:   0.96 cpl  ####
-    Week 4:   1.00 cpl  ####
-    Week 5:   1.00 cpl  ####
-    Week 6:   1.00 cpl  ####
-    Week 7:   1.00 cpl  ####
-    Week 8:   1.00 cpl  ####
+    Week 4:   1.00 cpl  #####
+    Week 5:   1.00 cpl  #####
+    Week 6:   1.00 cpl  #####
+    Week 7:   1.00 cpl  #####
+    Week 8:   1.00 cpl  #####
 
 --- SCENARIO FORECASTS (Diesel TGP, cpl) ---
 
