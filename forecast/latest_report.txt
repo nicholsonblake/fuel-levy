@@ -1,90 +1,90 @@
 ========================================================================
   TGP MULTI-FACTOR FORECAST MODEL
-  Run date: 2026-07-13
+  Run date: 2026-07-14
   Latest market data: 2026-07-13
 ========================================================================
 
 --- MODEL COMPARISON ---
 
   Baseline (WTI USD only)
-    R-squared: 0.7245
-    Adj R-sq:  0.7239
-    AIC:       4524
+    R-squared: 0.7237
+    Adj R-sq:  0.7231
+    AIC:       4517
 
   FX-adjusted (WTI AUD cpl)
-    R-squared: 0.8321
-    Adj R-sq:  0.8318
-    AIC:       4266
+    R-squared: 0.8316
+    Adj R-sq:  0.8313
+    AIC:       4259
 
   Legacy full (crude AUD + crack + excise)
-    R-squared: 0.9476
-    Adj R-sq:  0.9473
-    AIC:       3664
+    R-squared: 0.9474
+    Adj R-sq:  0.9471
+    AIC:       3658
 
   --- Cointegration (Engle-Granger) ---
-    ADF statistic: -8.674
+    ADF statistic: -8.571
     p-value:       0.0000
     Cointegrated:  YES
 
   Long-run model (ex-excise TGP ~ crude AUD + crack)
-    R-squared: 0.9244
-    Adj R-sq:  0.9242
-    RMSE:      9.44 cpl
+    R-squared: 0.9238
+    Adj R-sq:  0.9235
+    RMSE:      9.48 cpl
 
   Error Correction Model (weekly)
-    EC coefficient: -0.3745 (should be negative)
-    R-squared:      0.3368
+    EC coefficient: -0.3739 (should be negative)
+    R-squared:      0.3358
 
-  Training period: 2016-07-31 to 2026-07-19 (521 weeks)
+  Training period: 2016-08-07 to 2026-07-19 (520 weeks)
 
 --- LONG-RUN MODEL COEFFICIENTS (ex-excise TGP) ---
 
-  const                              7.8445  (p=0.0000) ***
-  WTI_AUD_CPL                        1.2283  (p=0.0000) ***
-  diesel_crack_aud_cpl               0.9609  (p=0.0000) ***
+  const                              7.8480  (p=0.0000) ***
+  WTI_AUD_CPL                        1.2286  (p=0.0000) ***
+  diesel_crack_aud_cpl               0.9595  (p=0.0000) ***
 
 --- ECM COEFFICIENTS ---
 
-  const                              0.1230  (p=0.5842) 
-  ec_term                           -0.3745  (p=0.0000) ***
-  d_wti_aud_cpl                      0.2129  (p=0.0014) **
-  d_crack                            0.1438  (p=0.0042) **
+  const                              0.1332  (p=0.5544) 
+  ec_term                           -0.3739  (p=0.0000) ***
+  d_wti_aud_cpl                      0.2054  (p=0.0021) **
+  d_crack                            0.1453  (p=0.0039) **
 
 --- CURRENT CONDITIONS ---
 
-  WTI Crude:       $74.36 USD/bbl
-  AUD/USD:         0.6930
-  WTI in AUD:      67.5 cpl
-  Diesel crack:    72.4 cpl (AUD)
+  WTI Crude:       $79.57 USD/bbl
+  AUD/USD:         0.6942
+  WTI in AUD:      72.1 cpl
+  Diesel crack:    71.6 cpl (AUD)
   Excise:          52.3 cpl
   Actual TGP:      186.2 cpl
 
 --- TGP DECOMPOSITION (what is driving each cent) ---
 
-  Crude oil (AUD):         82.9 cpl
-  Refining margin:         69.6 cpl
+  Crude oil (AUD):         88.6 cpl
+  Refining margin:         68.7 cpl
   Excise (known):          52.3 cpl
   Intercept (base):         7.8 cpl
   ---
-  Model prediction:       212.7 cpl
+  Model prediction:       217.4 cpl
   Actual TGP:             186.2 cpl
-  Residual:               -26.5 cpl
-  Model RMSE:               9.4 cpl
+  Residual:               -31.2 cpl
+  Model RMSE:               9.5 cpl
 
 --- ASYMMETRIC PASS-THROUGH (rockets and feathers) ---
 
-  R-squared of asymmetric model: 0.4175
+  R-squared of asymmetric model: 0.4155
   Total up pass-through:   1.00 cpl per 1 cpl crude rise
   Total down pass-through: 1.00 cpl per 1 cpl crude fall
-  Weeks to 75% pass-through (RISE):  1
+  Weeks to 75% pass-through (RISE):  2
   Weeks to 75% pass-through (FALL):  2
-  Immediate pass-through (RISE):     42%
-  Immediate pass-through (FALL):     9%
+  Immediate pass-through (RISE):     39%
+  Immediate pass-through (FALL):     10%
 
   Cumulative response to 1 cpl crude INCREASE:
-    Week 0:   0.42 cpl  ##
-    Week 1:   0.75 cpl  ###
-    Week 2:   0.94 cpl  ####
+    Week 0:   0.39 cpl  #
+    Week 1:   0.73 cpl  ###
+    Week 2:   0.92 cpl  ####
     Week 3:   1.00 cpl  ####
     Week 4:   1.00 cpl  ####
     Week 5:   1.00 cpl  ####
@@ -93,8 +93,8 @@
     Week 8:   1.00 cpl  ####
 
   Cumulative response to 1 cpl crude DECREASE:
-    Week 0:   0.09 cpl  
-    Week 1:   0.48 cpl  ##
+    Week 0:   0.10 cpl  
+    Week 1:   0.49 cpl  ##
     Week 2:   0.81 cpl  ####
     Week 3:   0.98 cpl  ####
     Week 4:   1.00 cpl  #####
@@ -110,7 +110,8 @@
    WTI USD  AUD 0.56  AUD 0.60  AUD 0.64  AUD 0.68  AUD 0.72
   ----------------------------------------------------------
   $    65      -      -      -      -      -
-  $    75      -      -      -      -      -  <-- ~current crude
+  $    75      -      -      -      -      -
+  $    80      -      -      -      -      -  <-- ~current crude
   $    85      -      -      -      -      -
   $    95      -      -      -      -      -
   $   110      -      -      -      -      -
@@ -121,6 +122,6 @@
 
   Signal threshold: 9 cpl (1x model RMSE)
 
-  TGP is BELOW model equilibrium by 26 cpl (>9 cpl threshold).
+  TGP is BELOW model equilibrium by 31 cpl (>9 cpl threshold).
   TGP has NOT YET caught up to current inputs.
   Expect TGP to RISE even if crude is flat.
