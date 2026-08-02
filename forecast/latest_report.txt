@@ -1,6 +1,6 @@
 ========================================================================
   TGP MULTI-FACTOR FORECAST MODEL
-  Run date: 2026-08-01
+  Run date: 2026-08-02
   Latest market data: 2026-07-31
 ========================================================================
 
@@ -22,7 +22,7 @@
     AIC:       3654
 
   --- Cointegration (Engle-Granger) ---
-    ADF statistic: -8.958
+    ADF statistic: -8.975
     p-value:       0.0000
     Cointegrated:  YES
 
@@ -32,43 +32,43 @@
     RMSE:      9.47 cpl
 
   Error Correction Model (weekly)
-    EC coefficient: -0.3836 (should be negative)
+    EC coefficient: -0.3837 (should be negative)
     R-squared:      0.3543
 
   Training period: 2016-08-21 to 2026-08-02 (520 weeks)
 
 --- LONG-RUN MODEL COEFFICIENTS (ex-excise TGP) ---
 
-  const                              7.8685  (p=0.0000) ***
-  WTI_AUD_CPL                        1.2331  (p=0.0000) ***
-  diesel_crack_aud_cpl               0.9483  (p=0.0000) ***
+  const                              7.8743  (p=0.0000) ***
+  WTI_AUD_CPL                        1.2327  (p=0.0000) ***
+  diesel_crack_aud_cpl               0.9490  (p=0.0000) ***
 
 --- ECM COEFFICIENTS ---
 
-  const                              0.1818  (p=0.4199) 
-  ec_term                           -0.3836  (p=0.0000) ***
-  d_wti_aud_cpl                      0.2258  (p=0.0007) ***
-  d_crack                            0.1477  (p=0.0033) **
+  const                              0.1815  (p=0.4208) 
+  ec_term                           -0.3837  (p=0.0000) ***
+  d_wti_aud_cpl                      0.2257  (p=0.0007) ***
+  d_crack                            0.1475  (p=0.0033) **
 
 --- CURRENT CONDITIONS ---
 
   WTI Crude:       $84.67 USD/bbl
   AUD/USD:         0.7025
   WTI in AUD:      75.8 cpl
-  Diesel crack:    79.2 cpl (AUD)
+  Diesel crack:    78.2 cpl (AUD)
   Excise:          52.3 cpl
   Actual TGP:      226.3 cpl
 
 --- TGP DECOMPOSITION (what is driving each cent) ---
 
-  Crude oil (AUD):         93.5 cpl
-  Refining margin:         75.1 cpl
+  Crude oil (AUD):         93.4 cpl
+  Refining margin:         74.2 cpl
   Excise (known):          52.3 cpl
   Intercept (base):         7.9 cpl
   ---
-  Model prediction:       228.7 cpl
+  Model prediction:       227.8 cpl
   Actual TGP:             226.3 cpl
-  Residual:                -2.4 cpl
+  Residual:                -1.5 cpl
   Model RMSE:               9.5 cpl
 
 --- ASYMMETRIC PASS-THROUGH (rockets and feathers) ---
@@ -105,7 +105,7 @@
 
 --- SCENARIO FORECASTS (Diesel TGP, cpl) ---
 
-  Using crack spread = $35/bbl (current conditions: ~$79 AUD/bbl equiv)
+  Using crack spread = $35/bbl (current conditions: ~$78 AUD/bbl equiv)
 
    WTI USD  AUD 0.56  AUD 0.60  AUD 0.64  AUD 0.68  AUD 0.72
   ----------------------------------------------------------
